@@ -1,0 +1,33 @@
+# Node
+node_modules/
+
+# Environment
+.env
+.env.*
+
+# Logs
+logs
+*.log
+
+# Build
+dist/
+build/
+
+# Vite
+.vite
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+
+# Uploads
+uploads/
+temp/
+
+# Coverage
+coverage/
