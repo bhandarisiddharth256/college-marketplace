@@ -27,12 +27,12 @@ connectDB();
 const server = http.createServer(app);
 
 /* ---------------- SOCKET.IO SETUP ---------------- */
-const io = new Server(server, {
-  cors: {
-    origin: "*",
-    credentials: true,
-  },
-});
+// const io = new Server(server, {
+//   cors: {
+//     origin: "*",
+//     credentials: true,
+//   },
+// });
 
 
 /* ---------------- SOCKET AUTH MIDDLEWARE ---------------- */
@@ -42,112 +42,112 @@ io.use(socketAuth);
 const onlineUsers = new Map();
 
 /* ---------------- SOCKET CONNECTION ---------------- */
-io.on("connection", (socket) => {
-  try {
-    const userId = socket.user._id.toString();
+// io.on("connection", (socket) => {
+//   try {
+//     const userId = socket.user._id.toString();
 
-    // Mark user online
-    onlineUsers.set(userId, socket.id);
-    console.log(`🟢 ${socket.user.name} is online`);
+//     // Mark user online
+//     onlineUsers.set(userId, socket.id);
+//     console.log(`🟢 ${socket.user.name} is online`);
 
-    io.emit("userOnline", userId);
+//     io.emit("userOnline", userId);
 
-    /* -------- JOIN CONVERSATION -------- */
-    socket.on("joinConversation", async (conversationId) => {
-      try {
-        const conversation = await Conversation.findById(conversationId);
+//     /* -------- JOIN CONVERSATION -------- */
+//     socket.on("joinConversation", async (conversationId) => {
+//       try {
+//         const conversation = await Conversation.findById(conversationId);
 
-        if (
-          conversation &&
-          conversation.participants.some(
-            (p) => p.toString() === userId
-          )
-        ) {
-          socket.join(conversationId);
-        }
-      } catch (err) {
-        console.error("Join conversation error:", err);
-      }
-    });
+//         if (
+//           conversation &&
+//           conversation.participants.some(
+//             (p) => p.toString() === userId
+//           )
+//         ) {
+//           socket.join(conversationId);
+//         }
+//       } catch (err) {
+//         console.error("Join conversation error:", err);
+//       }
+//     });
 
-    /* -------- TYPING INDICATOR -------- */
-    socket.on("typing", ({ conversationId }) => {
-      socket.to(conversationId).emit("userTyping", {
-        userId,
-        conversationId,
-      });
-    });
+//     /* -------- TYPING INDICATOR -------- */
+//     socket.on("typing", ({ conversationId }) => {
+//       socket.to(conversationId).emit("userTyping", {
+//         userId,
+//         conversationId,
+//       });
+//     });
 
-    socket.on("stopTyping", ({ conversationId }) => {
-      socket.to(conversationId).emit("userStopTyping", {
-        userId,
-        conversationId,
-      });
-    });
+//     socket.on("stopTyping", ({ conversationId }) => {
+//       socket.to(conversationId).emit("userStopTyping", {
+//         userId,
+//         conversationId,
+//       });
+//     });
 
-    /* -------- SEND MESSAGE -------- */
-    socket.on("sendMessage", async ({ conversationId, text }) => {
-      try {
-        if (!text || !text.trim()) return;
+//     /* -------- SEND MESSAGE -------- */
+//     socket.on("sendMessage", async ({ conversationId, text }) => {
+//       try {
+//         if (!text || !text.trim()) return;
 
-        const conversation = await Conversation.findById(conversationId);
-        if (!conversation) return;
+//         const conversation = await Conversation.findById(conversationId);
+//         if (!conversation) return;
 
-        // Authorization check
-        const isParticipant = conversation.participants.some(
-          (p) => p.toString() === userId
-        );
-        if (!isParticipant) return;
+//         // Authorization check
+//         const isParticipant = conversation.participants.some(
+//           (p) => p.toString() === userId
+//         );
+//         if (!isParticipant) return;
 
-        // Ensure sender is in room
-        socket.join(conversationId);
+//         // Ensure sender is in room
+//         socket.join(conversationId);
 
-        // Save message
-        const message = await Message.create({
-          conversation: conversationId,
-          sender: socket.user._id,
-          text,
-        });
+//         // Save message
+//         const message = await Message.create({
+//           conversation: conversationId,
+//           sender: socket.user._id,
+//           text,
+//         });
 
-        // Update last message
-        conversation.lastMessage = text;
+//         // Update last message
+//         conversation.lastMessage = text;
 
-        // Update unread count for other participants
-        conversation.participants.forEach((participantId) => {
-          const pid = participantId.toString();
-          if (pid !== userId) {
-            const currentUnread =
-              conversation.unreadCount?.get(pid) || 0;
-            conversation.unreadCount.set(pid, currentUnread + 1);
-          }
-        });
+//         // Update unread count for other participants
+//         conversation.participants.forEach((participantId) => {
+//           const pid = participantId.toString();
+//           if (pid !== userId) {
+//             const currentUnread =
+//               conversation.unreadCount?.get(pid) || 0;
+//             conversation.unreadCount.set(pid, currentUnread + 1);
+//           }
+//         });
 
-        conversation.markModified("unreadCount");
-        await conversation.save();
+//         conversation.markModified("unreadCount");
+//         await conversation.save();
 
-        // Emit message
-        io.to(conversationId).emit("newMessage", {
-          _id: message._id,
-          conversation: conversationId,
-          sender: socket.user._id,
-          text,
-          createdAt: message.createdAt,
-        });
-      } catch (err) {
-        console.error("Send message error:", err);
-      }
-    });
+//         // Emit message
+//         io.to(conversationId).emit("newMessage", {
+//           _id: message._id,
+//           conversation: conversationId,
+//           sender: socket.user._id,
+//           text,
+//           createdAt: message.createdAt,
+//         });
+//       } catch (err) {
+//         console.error("Send message error:", err);
+//       }
+//     });
 
-    /* -------- DISCONNECT -------- */
-    socket.on("disconnect", () => {
-      onlineUsers.delete(userId);
-      console.log(`🔴 ${socket.user.name} is offline`);
-      io.emit("userOffline", userId);
-    });
-  } catch (err) {
-    console.error("Socket connection error:", err);
-  }
-});
+//     /* -------- DISCONNECT -------- */
+//     socket.on("disconnect", () => {
+//       onlineUsers.delete(userId);
+//       console.log(`🔴 ${socket.user.name} is offline`);
+//       io.emit("userOffline", userId);
+//     });
+//   } catch (err) {
+//     console.error("Socket connection error:", err);
+//   }
+// });
 
 console.log("Cloudinary key:", process.env.CLOUDINARY_API_KEY);
 console.log("Cloudinary key:", process.env.CLOUDINARY_API_SECRET);
