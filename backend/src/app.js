@@ -16,8 +16,8 @@ import chatRoutes from "./routes/chat.routes.js";
 const app = express();
 
 const allowedOrigins = [
- "http://localhost:5173",
- "https://college-marketplace-k69b.onrender.com"
+  "http://localhost:5173",
+  "https://college-marketplace-5n4cxbj3y.vercel.app"
 ];
 
 app.use(cors({

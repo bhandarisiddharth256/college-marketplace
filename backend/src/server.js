@@ -27,7 +27,7 @@ const server = http.createServer(app);
 /* ---------------- SOCKET.IO SETUP ---------------- */
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://college-marketplace-k69b.onrender.com",
+  "https://college-marketplace-5n4cxbj3y.vercel.app"
 ];
 
 const io = new Server(server, {
