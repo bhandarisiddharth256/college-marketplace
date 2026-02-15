@@ -26,7 +26,7 @@ const listingSchema = new mongoose.Schema(
 
     condition: {
       type: String,
-      enum: ["new", "like-new", "used"],
+      enum: ["new", "like-new", "used" , "old"],
       required: true,
     },
 
