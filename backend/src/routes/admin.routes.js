@@ -2,17 +2,23 @@ import express from "express";
 import { protect } from "../middlewares/auth.middleware.js";
 import { isAdmin } from "../middlewares/admin.middleware.js";
 import {
-  getAllUsers,
-  getAllListingsAdmin,
+  getAdminStats,
+  getUsersAdmin,
+  getListingsAdmin,
   deleteListingAdmin,
+  getReportedMessages,
+  deleteReportedMessage
 } from "../controllers/admin.controller.js";
 
 const router = express.Router();
 
-router.use(protect, isAdmin);
+router.use(protect,isAdmin);
 
-router.get("/users", getAllUsers);
-router.get("/listings", getAllListingsAdmin);
-router.delete("/listings/:id", deleteListingAdmin);
+router.get("/stats",getAdminStats);
+router.get("/users",getUsersAdmin);
+router.get("/listings",getListingsAdmin);
+router.delete("/listings/:id",deleteListingAdmin);
+router.get("/reported-messages",getReportedMessages);
+router.delete("/messages/:id",deleteReportedMessage);
 
 export default router;

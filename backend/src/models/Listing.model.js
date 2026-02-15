@@ -47,8 +47,12 @@ const listingSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const Listing = mongoose.model("Listing", listingSchema);

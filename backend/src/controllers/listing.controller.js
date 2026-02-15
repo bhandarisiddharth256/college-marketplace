@@ -6,7 +6,6 @@ import cleanupSoldListing from "../utils/cleanupSoldListing.js";
 import cleanupListingReferences from "../utils/cleanupListingReferences.js";
 import uploadToCloudinary from "../utils/uploadToCloudinary.js";
 import deleteFromCloudinary from "../utils/deleteFromCloudinary.js";
-import Notification from "../models/Notification.model.js";
 import Cart from "../models/CartItem.model.js";
 import Wishlist from "../models/WishlistItem.model.js";
 
@@ -48,9 +47,9 @@ export const createListing = asyncHandler(async (req, res) => {
     owner: req.user._id,
   });
 
-  return res.status(201).json(
-    new ApiResponse(201, listing, "Listing created successfully")
-  );
+  return res
+    .status(201)
+    .json(new ApiResponse(201, listing, "Listing created successfully"));
 });
 
 /* 🛒 Get all available listings (Marketplace) */
@@ -75,7 +74,7 @@ export const getAllListings = asyncHandler(async (req, res) => {
       filter.price.$lte = Number(req.query.maxPrice);
     }
   }
-
+  filter.isDeleted = false;
   const listings = await Listing.find(filter)
     .populate("owner", "name college")
     .sort({ createdAt: -1 })
@@ -85,12 +84,16 @@ export const getAllListings = asyncHandler(async (req, res) => {
   const total = await Listing.countDocuments(filter);
 
   return res.status(200).json(
-    new ApiResponse(200, {
-      listings,
-      page,
-      totalPages: Math.ceil(total / limit),
-      totalItems: total,
-    }, "Marketplace listings fetched")
+    new ApiResponse(
+      200,
+      {
+        listings,
+        page,
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+      },
+      "Marketplace listings fetched",
+    ),
   );
 });
 
@@ -98,22 +101,22 @@ export const getAllListings = asyncHandler(async (req, res) => {
 export const getMyListings = asyncHandler(async (req, res) => {
   const listings = await Listing.find({
     owner: req.user._id,
+    isDeleted: false,
   }).sort({ createdAt: -1 });
 
-  return res.status(200).json(
-    new ApiResponse(
-      200,
-      listings,
-      "My listings fetched successfully"
-    )
-  );
+  return res
+    .status(200)
+    .json(new ApiResponse(200, listings, "My listings fetched successfully"));
 });
 
-/* ✅ Mark listing as sold + create notifications */
+/* ✅ Mark listing as sold*/
 export const markListingAsSold = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const listing = await Listing.findById(id);
+  const listing = await Listing.findOne({
+    _id: id,
+    isDeleted: false,
+  });
 
   if (!listing) {
     throw new ApiError(404, "Listing not found");
@@ -135,58 +138,27 @@ export const markListingAsSold = asyncHandler(async (req, res) => {
 
   /* ---------------- FIND AFFECTED USERS ---------------- */
   const cartUsers = await Cart.find({ listing: listing._id }).distinct("user");
-  const wishlistUsers = await Wishlist.find({ listing: listing._id }).distinct("user");
-
-  /* ---------------- CREATE NOTIFICATIONS ---------------- */
-  const notifications = [];
-
-  // 🛒 Cart notifications
-  for (const userId of cartUsers) {
-    if (userId.toString() === listing.owner.toString()) continue;
-
-    notifications.push({
-      user: userId,
-      type: "cart_sold",
-      message: "An item in your cart has been sold",
-      listing: listing._id,
-    });
-  }
-
-  // ❤️ Wishlist notifications
-  for (const userId of wishlistUsers) {
-    if (userId.toString() === listing.owner.toString()) continue;
-
-    notifications.push({
-      user: userId,
-      type: "wishlist_sold",
-      message: "An item from your wishlist has been sold",
-      listing: listing._id,
-    });
-  }
-
-  if (notifications.length > 0) {
-    await Notification.insertMany(notifications);
-  }
+  const wishlistUsers = await Wishlist.find({ listing: listing._id }).distinct(
+    "user",
+  );
 
   /* ---------------- CLEANUP ---------------- */
   // 🧹 Remove from all carts & wishlists (your existing logic)
   await cleanupSoldListing(listing._id);
 
-  return res.status(200).json(
-    new ApiResponse(
-      200,
-      listing,
-      "Listing marked as sold successfully"
-    )
-  );
+  return res
+    .status(200)
+    .json(new ApiResponse(200, listing, "Listing marked as sold successfully"));
 });
 
-
-/* ✏️ Edit listing (owner or admin) */
+/* Edit listing (owner or admin) */
 export const updateListing = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const listing = await Listing.findById(id);
+  const listing = await Listing.findOne({
+    _id: id,
+    isDeleted: false,
+  });
 
   if (!listing) {
     throw new ApiError(404, "Listing not found");
@@ -198,8 +170,7 @@ export const updateListing = asyncHandler(async (req, res) => {
   }
 
   // Authorization: owner or admin
-  const isOwner =
-    listing.owner.toString() === req.user._id.toString();
+  const isOwner = listing.owner.toString() === req.user._id.toString();
   const isAdmin = req.user.role === "admin";
 
   if (!isOwner && !isAdmin) {
@@ -221,6 +192,7 @@ export const updateListing = asyncHandler(async (req, res) => {
       listing[field] = req.body[field];
     }
   });
+
   if (req.files && req.files.length > 0) {
     const newImages = await uploadToCloudinary(req.files);
 
@@ -230,28 +202,26 @@ export const updateListing = asyncHandler(async (req, res) => {
 
   await listing.save();
 
-  return res.status(200).json(
-    new ApiResponse(
-      200,
-      listing,
-      "Listing updated successfully"
-    )
-  );
+  return res
+    .status(200)
+    .json(new ApiResponse(200, listing, "Listing updated successfully"));
 });
 
 /* 🗑️ Delete listing (owner or admin) */
 export const deleteListing = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const listing = await Listing.findById(id);
+  const listing = await Listing.findOne({
+    _id: id,
+    isDeleted: false,
+  });
 
   if (!listing) {
     throw new ApiError(404, "Listing not found");
   }
 
   // Authorization
-  const isOwner =
-    listing.owner.toString() === req.user._id.toString();
+  const isOwner = listing.owner.toString() === req.user._id.toString();
   const isAdmin = req.user.role === "admin";
 
   if (!isOwner && !isAdmin) {
@@ -262,15 +232,12 @@ export const deleteListing = asyncHandler(async (req, res) => {
   await cleanupListingReferences(listing._id);
 
   // Delete listing
-  await listing.deleteOne();
+  listing.isDeleted = true;
+  await listing.save()
 
-  return res.status(200).json(
-    new ApiResponse(
-      200,
-      null,
-      "Listing deleted successfully"
-    )
-  );
+  return res
+    .status(200)
+    .json(new ApiResponse(200, null, "Listing deleted successfully"));
 });
 
 /* ❌ Remove image from listing */
@@ -278,14 +245,16 @@ export const removeListingImage = asyncHandler(async (req, res) => {
   const { id } = req.params; // listingId
   const { imageUrl } = req.body;
 
-  const listing = await Listing.findById(id);
+  const listing = await Listing.findOne({
+    _id: id,
+    isDeleted: false,
+  });
   if (!listing) {
     throw new ApiError(404, "Listing not found");
   }
 
   // Owner or admin only
-  const isOwner =
-    listing.owner.toString() === req.user._id.toString();
+  const isOwner = listing.owner.toString() === req.user._id.toString();
   const isAdmin = req.user.role === "admin";
 
   if (!isOwner && !isAdmin) {
@@ -300,19 +269,13 @@ export const removeListingImage = asyncHandler(async (req, res) => {
   await deleteFromCloudinary(imageUrl);
 
   // Remove from DB
-  listing.images = listing.images.filter(
-    (img) => img !== imageUrl
-  );
+  listing.images = listing.images.filter((img) => img !== imageUrl);
 
   await listing.save();
 
-  return res.status(200).json(
-    new ApiResponse(
-      200,
-      listing.images,
-      "Image removed successfully"
-    )
-  );
+  return res
+    .status(200)
+    .json(new ApiResponse(200, listing.images, "Image removed successfully"));
 });
 
 /* 🔃 Reorder listing images */
@@ -324,14 +287,16 @@ export const reorderListingImages = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Images must be an array");
   }
 
-  const listing = await Listing.findById(id);
+  const listing = await Listing.findOne({
+    _id: id,
+    isDeleted: false,
+  });
   if (!listing) {
     throw new ApiError(404, "Listing not found");
   }
 
   // Owner or admin check
-  const isOwner =
-    listing.owner.toString() === req.user._id.toString();
+  const isOwner = listing.owner.toString() === req.user._id.toString();
   const isAdmin = req.user.role === "admin";
 
   if (!isOwner && !isAdmin) {
@@ -351,29 +316,27 @@ export const reorderListingImages = asyncHandler(async (req, res) => {
     images.every((img) => existingImages.includes(img));
 
   if (!sameImages) {
-    throw new ApiError(
-      400,
-      "Image list must contain the same images"
-    );
+    throw new ApiError(400, "Image list must contain the same images");
   }
 
   // Reorder
   listing.images = images;
   await listing.save();
 
-  return res.status(200).json(
-    new ApiResponse(
-      200,
-      listing.images,
-      "Images reordered successfully"
-    )
-  );
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, listing.images, "Images reordered successfully"),
+    );
 });
 
 /* 🔍 Get single listing by ID */
 export const getListingById = async (req, res) => {
   try {
-    const listing = await Listing.findById(req.params.id);
+    const listing = await Listing.findOne({
+    _id: req.params.id,
+    isDeleted: false,
+  });
 
     if (!listing) {
       return res.status(404).json({
@@ -393,4 +356,3 @@ export const getListingById = async (req, res) => {
     });
   }
 };
-

@@ -5,6 +5,8 @@ import {
   getMyConversations,
   getMessages,
   sendMessage,
+  deleteMessage,
+  reportMessage,
 } from "../controllers/chat.controller.js";
 
 const router = express.Router();
@@ -21,4 +23,9 @@ router.get("/:conversationId/messages", protect, getMessages);
 // Send message
 router.post("/:conversationId/messages", protect, sendMessage);
 
+//delete message
+router.delete("/message/:messageId", protect, deleteMessage);
+
+//report message
+router.post("/message/:messageId/report", protect, reportMessage);
 export default router;

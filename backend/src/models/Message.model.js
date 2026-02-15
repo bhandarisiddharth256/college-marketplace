@@ -16,16 +16,38 @@ const messageSchema = new mongoose.Schema(
 
     text: {
       type: String,
-      required: true,
       trim: true,
     },
 
-    isDeleted: {
-        type: Boolean,
-        default: false,
+    image: {
+      type: String,
     },
+
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+
+    reported: {
+      type: Boolean,
+      default: false,
+    },
+
+    reports: [
+      {
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+        reason: String,
+        reportedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 messageSchema.index({ conversation: 1 });

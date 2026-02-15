@@ -1,30 +1,38 @@
 import { useEffect, useState } from "react";
+import { useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
-  startConversation,
   getMyConversations,
   getMessages,
   sendMessage,
+  deleteMessage,
 } from "../api/chat.api";
-import { socket } from "../socket";
 import { useAuth } from "../context/AuthContext";
-
+import { reportMessage } from "../api/chat.api";
+import { socket, connectSocket } from "../socket";
 function Messages() {
   const [searchParams] = useSearchParams();
   const listingId = searchParams.get("listingId");
-
+  const listingTitle = searchParams.get("title");
+  const listingHandled = useRef(false);
   const { user } = useAuth();
   const userId = user?._id;
-
+  const [selectedImages, setSelectedImages] = useState([]);
+  const [previewImage, setPreviewImage] = useState(null);
   const [conversations, setConversations] = useState([]);
   const [activeConversation, setActiveConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const [onlineUsers, setOnlineUsers] = useState(new Set());
+  const [selectedMsg, setSelectedMsg] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const messagesEndRef = useRef(null);
 
   /* ---------------- SOCKET CONNECT ---------------- */
+
   useEffect(() => {
-    socket.connect();
+    connectSocket(); // <-- IMPORTANT
 
     socket.on("connect", () => {
       console.log("✅ Socket connected:", socket.id);
@@ -102,17 +110,25 @@ function Messages() {
   useEffect(() => {
     if (!listingId) return;
 
-    const initConversation = async () => {
-      try {
-        const res = await startConversation(listingId);
-        setActiveConversation(res.data);
-      } catch {
-        console.error("Failed to start conversation");
-      }
-    };
+    const existing = conversations.find((c) => c.listing?._id === listingId);
 
-    initConversation();
-  }, [listingId]);
+    if (existing) {
+      setActiveConversation(existing);
+    } else {
+      // create TEMP conversation so chat UI opens
+      setActiveConversation({
+        _id: null,
+        listing: {
+          _id: listingId,
+          title: "Loading...",
+        },
+        participants: [],
+        unreadCount: {},
+      });
+
+      setMessages([]);
+    }
+  }, [listingId, conversations]);
 
   /* ---------------- LOAD MESSAGES ---------------- */
   useEffect(() => {
@@ -132,14 +148,7 @@ function Messages() {
 
   /* ---------------- SEND MESSAGE (OPTIMISTIC) ---------------- */
   const handleSend = async () => {
-    if (
-      !text.trim() ||
-      !activeConversation ||
-      !userId ||
-      activeConversation.listing?.status === "sold"
-    ) {
-      return;
-    }
+    if (!text.trim() || !userId) return;
 
     const tempMessage = {
       _id: "temp-" + Date.now(),
@@ -151,11 +160,65 @@ function Messages() {
     setText("");
 
     try {
-      await sendMessage(activeConversation._id, text);
-    } catch {
+      await sendMessage(activeConversation?._id, text, listingId);
+
+      const updated = await getMyConversations();
+
+      setConversations(updated.data);
+
+      // 🔥 VERY IMPORTANT: replace temp conversation with real one
+      if (!activeConversation?._id) {
+        const created = updated.data.find((c) => c.listing?._id === listingId);
+
+        if (created) {
+          setActiveConversation(created);
+        }
+      }
+    } catch (err) {
       alert("Failed to send message");
       setMessages((prev) => prev.filter((m) => m._id !== tempMessage._id));
     }
+  };
+
+  /* -------- MESSAGE DELETE REALTIME -------- */
+  useEffect(() => {
+    socket.on("messageDeleted", ({ messageId }) => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m._id === messageId
+            ? { ...m, text: "This message was deleted", isDeleted: true }
+            : m,
+        ),
+      );
+
+      setConversations((prev) =>
+        prev.map((c) => {
+          if (c._id !== activeConversation?._id) return c;
+
+          return {
+            ...c,
+            lastMessage: "This message was deleted",
+          };
+        }),
+      );
+    });
+    return () => socket.off("messageDeleted");
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [activeConversation]);
+  const handleMessageClick = (msg) => {
+    setSelectedMsg(msg);
+    setShowModal(true);
+  };
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   const getOtherUserId = (conv) =>
@@ -182,7 +245,22 @@ function Messages() {
             return (
               <div
                 key={conv._id}
-                onClick={() => setActiveConversation(conv)}
+                onClick={async () => {
+                  setActiveConversation(conv);
+                  setConversations((prev) =>
+                    prev.map((c) =>
+                      c._id === conv._id
+                        ? {
+                            ...c,
+                            unreadCount: {
+                              ...c.unreadCount,
+                              [userId]: 0,
+                            },
+                          }
+                        : c,
+                    ),
+                  );
+                }}
                 className={`p-3 rounded cursor-pointer mb-2 border ${
                   isActive
                     ? "bg-gray-100"
@@ -220,7 +298,13 @@ function Messages() {
                   )}
                 </div>
 
-                <p className="text-xs text-gray-500 mt-1 truncate">
+                <p
+                  className={`text-xs mt-1 truncate ${
+                    conv.lastMessage === "This message was deleted"
+                      ? "italic text-gray-400"
+                      : "text-gray-500"
+                  }`}
+                >
                   {conv.lastMessage || "No messages yet"}
                 </p>
               </div>
@@ -288,34 +372,77 @@ function Messages() {
                 return (
                   <div
                     key={msg._id}
+                    onClick={() => !msg.isDeleted && handleMessageClick(msg)}
                     className={`max-w-[70%] px-3 py-2 rounded text-sm whitespace-pre-wrap break-words ${
-                      isMine
+                      msg.isDeleted
+                        ? "opacity-60 cursor-not-allowed"
+                        : "cursor-pointer"
+                    } ${
+                      msg.sender === userId
                         ? "ml-auto bg-blue-600 text-white"
                         : "mr-auto bg-gray-200 text-gray-800"
                     }`}
                   >
-                    {msg.text}
+                    {msg.isDeleted ? <i>This message was deleted</i> : msg.text}
                   </div>
                 );
               })}
+              <div ref={messagesEndRef} />
             </div>
+            {selectedImages.length > 0 && (
+              <div className="flex gap-2 mb-2 flex-wrap">
+                {selectedImages.map((img, i) => (
+                  <div key={i} className="relative">
+                    <img
+                      src={URL.createObjectURL(img)}
+                      className="h-20 w-20 object-cover rounded cursor-pointer"
+                      onClick={() => setPreviewImage(URL.createObjectURL(img))}
+                    />
 
+                    <span
+                      onClick={() =>
+                        setSelectedImages(
+                          selectedImages.filter((_, x) => x !== i),
+                        )
+                      }
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full px-1 cursor-pointer"
+                    >
+                      ✕
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
             {/* INPUT */}
             <div className="flex gap-2 border-t pt-3">
+              {/* Hidden file input */}
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                id="imagePicker"
+                hidden
+                onChange={(e) =>
+                  setSelectedImages([
+                    ...selectedImages,
+                    ...Array.from(e.target.files),
+                  ])
+                }
+              />
+
+              {/* Add Image Button */}
+              <button
+                onClick={() => document.getElementById("imagePicker").click()}
+                className="px-3 border rounded"
+              >
+                📎
+              </button>
+
               <input
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                disabled={activeConversation?.listing?.status === "sold"}
-                className={`flex-1 border p-2 rounded ${
-                  activeConversation?.listing?.status === "sold"
-                    ? "bg-gray-100 cursor-not-allowed"
-                    : ""
-                }`}
-                placeholder={
-                  activeConversation?.listing?.status === "sold"
-                    ? "Chat disabled — item sold"
-                    : "Type a message..."
-                }
+                className="flex-1 border p-2 rounded"
+                placeholder="Type message..."
               />
 
               <button
@@ -333,6 +460,69 @@ function Messages() {
           </>
         )}
       </div>
+
+      {previewImage && (
+        <div
+          onClick={() => setPreviewImage(null)}
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
+        >
+          <img src={previewImage} className="max-h-[90%]" />
+        </div>
+      )}
+
+      {showModal && selectedMsg && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded p-5 w-80">
+            <p className="font-semibold mb-3">Message options</p>
+
+            {/* DELETE (ONLY SENDER) */}
+            {selectedMsg.sender === userId && (
+              <button
+                onClick={() => {
+                  socket.emit("deleteMessage", { messageId: selectedMsg._id });
+                  setShowModal(false);
+                }}
+                className="w-full mb-3 py-2 bg-red-500 text-white rounded"
+              >
+                🗑 Delete Message
+              </button>
+            )}
+
+            {/* REPORT (ONLY RECEIVER) */}
+            {selectedMsg.sender !== userId && (
+              <>
+                <textarea
+                  placeholder="Enter report reason..."
+                  className="w-full border p-2 rounded mb-2"
+                  rows={3}
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                />
+
+                <button
+                  onClick={async () => {
+                    if (!reportReason.trim()) return alert("Enter reason");
+
+                    await reportMessage(selectedMsg._id, reportReason);
+                    setReportReason("");
+                    setShowModal(false);
+                  }}
+                  className="w-full mb-2 py-2 bg-yellow-500 text-white rounded"
+                >
+                  🚩 Report Message
+                </button>
+              </>
+            )}
+
+            <button
+              onClick={() => setShowModal(false)}
+              className="w-full py-2 border rounded"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

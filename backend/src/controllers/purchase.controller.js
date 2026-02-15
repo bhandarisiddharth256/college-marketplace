@@ -9,7 +9,10 @@ import cleanupSoldListing from "../utils/cleanupSoldListing.js";
 export const buyListing = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const listing = await Listing.findById(id);
+  const listing = await Listing.findOne({
+    _id: id,
+    isDeleted: false,
+  });
 
   if (!listing) {
     throw new ApiError(404, "Listing not found");

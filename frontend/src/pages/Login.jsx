@@ -28,7 +28,7 @@ function Login() {
     setLoading(true);
     try {
       const res = await loginUser({ email, password });
-      login(res.data.token); // ✅ REAL JWT
+      login(res.data.token, res.data.user); // ✅ REAL JWT
       navigate('/');
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');

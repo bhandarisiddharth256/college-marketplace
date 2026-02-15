@@ -8,7 +8,10 @@ import asyncHandler from "../utils/asyncHandler.js";
 export const addToCart = asyncHandler(async (req, res) => {
   const { listingId } = req.body;
 
-  const listing = await Listing.findById(listingId);
+  const listing = await Listing.findOne({
+    _id: listingId,
+    isDeleted: false,
+  });
   if (!listing || listing.status === "sold") {
     throw new ApiError(404, "Listing not available");
   }
@@ -18,9 +21,9 @@ export const addToCart = asyncHandler(async (req, res) => {
     listing: listingId,
   });
 
-  return res.status(201).json(
-    new ApiResponse(201, cartItem, "Item added to cart")
-  );
+  return res
+    .status(201)
+    .json(new ApiResponse(201, cartItem, "Item added to cart"));
 });
 
 /* 🛒 Get my cart */
@@ -31,9 +34,9 @@ export const getMyCart = asyncHandler(async (req, res) => {
     .populate("listing", "title price category status")
     .sort({ createdAt: -1 });
 
-  return res.status(200).json(
-    new ApiResponse(200, cartItems, "Cart fetched successfully")
-  );
+  return res
+    .status(200)
+    .json(new ApiResponse(200, cartItems, "Cart fetched successfully"));
 });
 
 /* ❌ Remove from cart */
@@ -49,7 +52,7 @@ export const removeFromCart = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Cart item not found");
   }
 
-  return res.status(200).json(
-    new ApiResponse(200, null, "Item removed from cart")
-  );
+  return res
+    .status(200)
+    .json(new ApiResponse(200, null, "Item removed from cart"));
 });

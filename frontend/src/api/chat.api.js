@@ -1,31 +1,40 @@
-import api from './axios';
-
-// Start or get conversation (by listing)
-export const startConversation = async (listingId) => {
-  const res = await api.post('/api/chat/start', { listingId });
-  return res.data;
-};
+import api from "./axios";
 
 // Get my conversations
 export const getMyConversations = async () => {
-  const res = await api.get('/api/chat');
+  const res = await api.get("/api/chat");
   return res.data;
 };
 
 // Get messages of a conversation
 export const getMessages = async (conversationId) => {
-  const res = await api.get(
-    `/api/chat/${conversationId}/messages`
-  );
+  const res = await api.get(`/api/chat/${conversationId}/messages`);
   return res.data;
 };
 
-// Send message
-export const sendMessage = async (conversationId, text) => {
-  const res = await api.post(
-    `/api/chat/${conversationId}/messages`,
-    { text } // 🔥 IMPORTANT: text, not content
-  );
+// Send message (REST fallback – socket primary)
+export const sendMessage = async (conversationId, text, listingId) => {
+  const id = conversationId || "new";
+
+  const res = await api.post(`/api/chat/${id}/messages`, {
+    text,
+    listingId,
+  });
+
   return res.data;
 };
 
+// 🚩 Report message
+export const reportMessage = async (messageId, reason) => {
+  const res = await api.post(`/api/chat/message/${messageId}/report`, {
+    reason,
+  });
+
+  return res.data;
+};
+
+// 🗑 Delete message (REST fallback – socket primary)
+export const deleteMessage = async (messageId) => {
+  const res = await api.delete(`/api/chat/message/${messageId}`);
+  return res.data;
+};

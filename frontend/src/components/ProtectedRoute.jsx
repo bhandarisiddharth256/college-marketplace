@@ -1,20 +1,20 @@
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { Navigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
-function ProtectedRoute({ children }) {
-  const { isAuthenticated, authLoading } = useAuth();
+function ProtectedRoute({ children, adminOnly = false }) {
+  const { isAuthenticated, user, loading } = useAuth();
 
-  // ⏳ auth state still loading
-  if (authLoading) {
-    return <p>Checking authentication...</p>;
-  }
+  // Wait until auth loads
+  if (loading) return null;
 
-  // ❌ not logged in
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" />;
   }
 
-  // ✅ logged in
+  if (adminOnly && user?.role !== "admin") {
+    return <Navigate to="/" />;
+  }
+
   return children;
 }
 

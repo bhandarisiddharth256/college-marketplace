@@ -80,55 +80,55 @@ function AddListing() {
   };
 
   // 🔹 AI PRICE SUGGESTION
-  const handleSuggestPrice = async (auto = false) => {
-    if (!price || !category || !condition || !ageInMonths) {
-      if (!auto) alert("Fill base price, category, condition & age");
-      return;
-    }
+  // const handleSuggestPrice = async (auto = false) => {
+  //   if (!price || !category || !condition || !ageInMonths) {
+  //     if (!auto) alert("Fill base price, category, condition & age");
+  //     return;
+  //   }
 
-    const currentInput = {
-      price,
-      category,
-      condition,
-      ageInMonths,
-    };
+  //   const currentInput = {
+  //     price,
+  //     category,
+  //     condition,
+  //     ageInMonths,
+  //   };
 
-    if (
-      lastSuggestInput &&
-      JSON.stringify(lastSuggestInput) === JSON.stringify(currentInput)
-    ) {
-      return;
-    }
+  //   if (
+  //     lastSuggestInput &&
+  //     JSON.stringify(lastSuggestInput) === JSON.stringify(currentInput)
+  //   ) {
+  //     return;
+  //   }
 
-    try {
-      setSuggestLoading(true);
+  //   try {
+  //     setSuggestLoading(true);
 
-      const res = await suggestPrice({
-        basePrice: Number(price),
-        category,
-        condition,
-        ageInMonths: Number(ageInMonths),
-      });
+  //     const res = await suggestPrice({
+  //       basePrice: Number(price),
+  //       category,
+  //       condition,
+  //       ageInMonths: Number(ageInMonths),
+  //     });
 
-      const data = res.data;
+  //     const data = res.data;
 
-      setPriceSuggestion(data);
-      setLastSuggestInput(currentInput);
+  //     setPriceSuggestion(data);
+  //     setLastSuggestInput(currentInput);
 
-      const conf = calculateConfidence(
-        data.suggestedPrice,
-        data.minPrice,
-        data.maxPrice,
-      );
-      setConfidence(conf);
-    } catch (err) {
-      if (!auto) {
-        alert(err.response?.data?.message || "Failed to get price suggestion");
-      }
-    } finally {
-      setSuggestLoading(false);
-    }
-  };
+  //     const conf = calculateConfidence(
+  //       data.suggestedPrice,
+  //       data.minPrice,
+  //       data.maxPrice,
+  //     );
+  //     setConfidence(conf);
+  //   } catch (err) {
+  //     if (!auto) {
+  //       alert(err.response?.data?.message || "Failed to get price suggestion");
+  //     }
+  //   } finally {
+  //     setSuggestLoading(false);
+  //   }
+  // };
 
   // 🔹 SUBMIT
   const handleSubmit = async (e) => {
@@ -191,11 +191,11 @@ function AddListing() {
     setExistingImages(newImages);
   };
 
-  const isSuggestionUnchanged =
-    lastSuggestInput &&
-    lastSuggestInput.price === price &&
-    lastSuggestInput.category === category &&
-    lastSuggestInput.condition === condition;
+  // const isSuggestionUnchanged =
+  //   lastSuggestInput &&
+  //   lastSuggestInput.price === price &&
+  //   lastSuggestInput.category === category &&
+  //   lastSuggestInput.condition === condition;
 
   return (
     <div className="p-6 max-w-xl mx-auto">
@@ -241,24 +241,68 @@ function AddListing() {
           <option value="new">New</option>
           <option value="like-new">Like New</option>
           <option value="used">Used</option>
+          <option value="used">old</option>
         </select>
 
-        <input
-          type="file"
-          multiple
-          onChange={(e) => setImages([...e.target.files])}
-        />
+        {/* IMAGES */}
+        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+          <input
+            type="file"
+            id="images"
+            multiple
+            accept="image/*"
+            onChange={(e) =>
+              setImages((prev) => [...prev, ...Array.from(e.target.files)])
+            }
+            className="hidden"
+          />
 
-        <input
+          <label
+            htmlFor="images"
+            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer inline-block"
+          >
+            Choose Images
+          </label>
+
+          <p className="text-sm text-gray-500 mt-2">
+            Upload Images (max 5)
+          </p>
+        </div>
+
+        {/* PREVIEW */}
+        {images.length > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+            {images.map((img, index) => (
+              <div key={index} className="relative">
+                <img
+                  src={URL.createObjectURL(img)}
+                  className="w-full h-24 object-cover rounded-lg"
+                />
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setImages(images.filter((_, i) => i !== index))
+                  }
+                  className="absolute -top-2 -right-2 size-6 bg-red-600 text-white rounded-full"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* <input
           type="number"
           placeholder="Item age (in months)"
           className="w-full border p-2 rounded"
           value={ageInMonths}
           onChange={(e) => setAgeInMonths(e.target.value)}
           onBlur={() => handleSuggestPrice(true)}
-        />
+        /> */}
 
-        <button
+        {/* <button
           type="button"
           onClick={() => handleSuggestPrice(false)}
           disabled={suggestLoading || isSuggestionUnchanged}
@@ -269,9 +313,9 @@ function AddListing() {
             : isSuggestionUnchanged
               ? "Price Already Suggested"
               : "Suggest Price"}
-        </button>
+        </button> */}
 
-        {priceSuggestion && (
+        {/* {priceSuggestion && (
           <div className="border p-3 rounded bg-purple-50">
             <p>
               <b>Suggested Price:</b> ₹{priceSuggestion.suggestedPrice}
@@ -298,7 +342,7 @@ function AddListing() {
               Use Suggested Price
             </button>
           </div>
-        )}
+        )} */}
 
         <button
           disabled={loading}

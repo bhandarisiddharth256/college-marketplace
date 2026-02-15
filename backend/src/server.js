@@ -25,13 +25,17 @@ connectDB();
 const server = http.createServer(app);
 
 /* ---------------- SOCKET.IO SETUP ---------------- */
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://college-marketplace-k69b.onrender.com",
+];
+
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: allowedOrigins,
     credentials: true,
   },
 });
-
 
 /* ---------------- SOCKET AUTH MIDDLEWARE ---------------- */
 io.use(socketAuth);
@@ -57,9 +61,7 @@ io.on("connection", (socket) => {
 
         if (
           conversation &&
-          conversation.participants.some(
-            (p) => p.toString() === userId
-          )
+          conversation.participants.some((p) => p.toString() === userId)
         ) {
           socket.join(conversationId);
         }
@@ -84,16 +86,16 @@ io.on("connection", (socket) => {
     });
 
     /* -------- SEND MESSAGE -------- */
-    socket.on("sendMessage", async ({ conversationId, text }) => {
+    socket.on("sendMessage", async ({ conversationId, text, image }) => {
       try {
-        if (!text || !text.trim()) return;
+        if ((!text || !text.trim()) && !image) return;
 
         const conversation = await Conversation.findById(conversationId);
         if (!conversation) return;
 
         // Authorization check
         const isParticipant = conversation.participants.some(
-          (p) => p.toString() === userId
+          (p) => p.toString() === userId,
         );
         if (!isParticipant) return;
 
@@ -105,6 +107,7 @@ io.on("connection", (socket) => {
           conversation: conversationId,
           sender: socket.user._id,
           text,
+          image,
         });
 
         // Update last message
@@ -114,8 +117,7 @@ io.on("connection", (socket) => {
         conversation.participants.forEach((participantId) => {
           const pid = participantId.toString();
           if (pid !== userId) {
-            const currentUnread =
-              conversation.unreadCount?.get(pid) || 0;
+            const currentUnread = conversation.unreadCount?.get(pid) || 0;
             conversation.unreadCount.set(pid, currentUnread + 1);
           }
         });
@@ -127,12 +129,46 @@ io.on("connection", (socket) => {
         io.to(conversationId).emit("newMessage", {
           _id: message._id,
           conversation: conversationId,
-          sender: socket.user._id,
+          sender: socket.user._id.toString(),
           text,
+          image,
           createdAt: message.createdAt,
         });
       } catch (err) {
         console.error("Send message error:", err);
+      }
+    });
+
+    /* -------- DELETE MESSAGE -------- */
+    socket.on("deleteMessage", async ({ messageId }) => {
+      try {
+        const message = await Message.findById(messageId);
+        if (!message) return;
+
+        if (message.sender.toString() !== socket.user._id.toString()) return;
+
+        // SAVE OLD TEXT
+        const oldText = message.text;
+
+        message.isDeleted = true;
+        message.text = "This message was deleted";
+        message.image = null;
+
+        await message.save();
+
+        const convo = await Conversation.findById(message.conversation);
+
+        // UPDATE SIDEBAR LAST MESSAGE
+        if (convo && convo.lastMessage === oldText) {
+          convo.lastMessage = "This message was deleted";
+          await convo.save();
+        }
+
+        io.to(message.conversation.toString()).emit("messageDeleted", {
+          messageId,
+        });
+      } catch (err) {
+        console.error("Delete message error:", err);
       }
     });
 

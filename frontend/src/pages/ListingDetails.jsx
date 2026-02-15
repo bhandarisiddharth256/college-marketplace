@@ -8,7 +8,7 @@ import { addToWishlist, getWishlist } from "../api/wishlist.api";
 function ListingDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-
+  const [currentImage, setCurrentImage] = useState(0);
   const { user, isAuthenticated } = useAuth();
 
   const [listing, setListing] = useState(null);
@@ -25,9 +25,7 @@ function ListingDetails() {
         const res = await getListingById(id);
         setListing(res.data);
       } catch (err) {
-        setError(
-          err.response?.data?.message || "Failed to load listing"
-        );
+        setError(err.response?.data?.message || "Failed to load listing");
       } finally {
         setLoading(false);
       }
@@ -48,16 +46,10 @@ function ListingDetails() {
         const cartItems = cartRes.data || [];
         const wishlistItems = wishlistRes.data || [];
 
-        setIsInCart(
-          cartItems.some(
-            (item) => item.listing._id === listing._id
-          )
-        );
+        setIsInCart(cartItems.some((item) => item.listing._id === listing._id));
 
         setIsInWishlist(
-          wishlistItems.some(
-            (item) => item.listing._id === listing._id
-          )
+          wishlistItems.some((item) => item.listing._id === listing._id),
         );
       } catch (err) {
         console.error("Failed to check cart/wishlist");
@@ -79,9 +71,7 @@ function ListingDetails() {
       setIsInCart(true);
       alert("Added to cart");
     } catch (err) {
-      alert(
-        err.response?.data?.message || "Failed to add to cart"
-      );
+      alert(err.response?.data?.message || "Failed to add to cart");
     }
   };
 
@@ -96,10 +86,7 @@ function ListingDetails() {
       setIsInWishlist(true);
       alert("Added to wishlist");
     } catch (err) {
-      alert(
-        err.response?.data?.message ||
-          "Failed to add to wishlist"
-      );
+      alert(err.response?.data?.message || "Failed to add to wishlist");
     }
   };
 
@@ -125,30 +112,65 @@ function ListingDetails() {
   }
 
   /* ---------------- OWNER CHECK (SAFE PLACE) ---------------- */
-  const isOwner =
-    user && listing.owner === user._id;
+  const isOwner = user && listing.owner === user._id;
 
   const isSold = listing.status === "sold";
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <h2 className="text-2xl font-semibold mb-4">
-        {listing.title}
-      </h2>
+      <h2 className="text-2xl font-semibold mb-4">{listing.title}</h2>
 
       {listing.images?.length > 0 && (
-        <div className="mb-4">
+        <div className="relative mb-6">
+          {/* IMAGE */}
           <img
-            src={listing.images[0]}
+            src={listing.images[currentImage]}
             alt={listing.title}
             className="w-full max-h-96 object-cover rounded"
           />
+
+          {/* PREV */}
+          <button
+            onClick={() =>
+              setCurrentImage((prev) =>
+                prev === 0 ? listing.images.length - 1 : prev - 1,
+              )
+            }
+            className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white px-3 py-1 rounded"
+          >
+            ‹
+          </button>
+
+          {/* NEXT */}
+          <button
+            onClick={() =>
+              setCurrentImage((prev) =>
+                prev === listing.images.length - 1 ? 0 : prev + 1,
+              )
+            }
+            className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white px-3 py-1 rounded"
+          >
+            ›
+          </button>
+
+          {/* DOTS */}
+          <div className="flex justify-center gap-2 mt-3">
+            {listing.images.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentImage(index)}
+                className={`h-3 w-3 rounded-full transition-all ${
+                  currentImage === index
+                    ? "bg-blue-600 scale-110"
+                    : "bg-gray-300"
+                }`}
+              />
+            ))}
+          </div>
         </div>
       )}
 
-      <p className="text-gray-600 mb-4">
-        {listing.description}
-      </p>
+      <p className="text-gray-600 mb-4">{listing.description}</p>
 
       <div className="flex justify-between items-center mb-4">
         <span className="text-2xl font-bold text-blue-600">
@@ -160,14 +182,10 @@ function ListingDetails() {
         </span>
       </div>
 
-      <p className="text-sm text-gray-500">
-        Category: {listing.category}
-      </p>
+      <p className="text-sm text-gray-500">Category: {listing.category}</p>
 
       {isSold && (
-        <p className="mt-4 text-red-600 font-medium">
-          This item is sold
-        </p>
+        <p className="mt-4 text-red-600 font-medium">This item is sold</p>
       )}
 
       {/* ---------------- ACTIONS ---------------- */}
@@ -184,9 +202,7 @@ function ListingDetails() {
                     : "bg-pink-600 text-white"
                 }`}
               >
-                {isInWishlist
-                  ? "In Wishlist"
-                  : "Add to Wishlist"}
+                {isInWishlist ? "In Wishlist" : "Add to Wishlist"}
               </button>
 
               <button
@@ -209,9 +225,7 @@ function ListingDetails() {
               </button>
             </>
           ) : (
-            <p className="text-gray-600 italic">
-              This is your listing
-            </p>
+            <p className="text-gray-600 italic">This is your listing</p>
           )}
         </div>
       )}

@@ -12,13 +12,16 @@ import cleanupSoldListing from "../utils/cleanupSoldListing.js";
 export const createPaymentOrder = asyncHandler(async (req, res) => {
   const { listingId } = req.body;
 
-  const listing = await Listing.findById(listingId);
-  if (!listing || listing.status === "sold") {
+  const listing = await Listing.findOne({
+    _id: listingId,
+    isDeleted: false,
+  });
+  if (!listing || listing.status === "sold" || listing.isDeleted === "true") {
     throw new ApiError(404, "Listing not available");
   }
 
   const order = await razorpay.orders.create({
-    amount: listing.price, // paise
+    amount: listing.price * 100, // paise
     currency: "INR",
   });
 

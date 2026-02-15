@@ -17,13 +17,19 @@ import PaymentSuccess from "./pages/PaymentSuccess";
 import MyPurchases from "./pages/MyPurchases";
 import PurchaseDetails from "./pages/PurchaseDetails";
 import MySales from "./pages/MySales";
+import AdminLayout from "./pages/admin/AdminLayout";
+import Dashboard from "./pages/admin/Dashboard";
+import Users from "./pages/admin/Users";
+import Listings from "./pages/admin/Listings";
+import Reports from "./pages/admin/Reports";
+import Footer from "./components/Footer";
+import { useLocation } from "react-router-dom";
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Header />
-
         <Routes>
           {/* 🌐 Public */}
           <Route path="/" element={<Home />} />
@@ -129,7 +135,22 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute adminOnly>
+                <AdminLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Dashboard />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="users" element={<Users />} />
+            <Route path="listings" element={<Listings />} />
+            <Route path="reports" element={<Reports />} />
+          </Route>
         </Routes>
+        {/* <Footer /> */}
       </BrowserRouter>
     </AuthProvider>
   );

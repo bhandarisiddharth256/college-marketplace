@@ -9,7 +9,10 @@ import CartItem from "../models/CartItem.model.js";
 export const addToWishlist = asyncHandler(async (req, res) => {
   const { listingId } = req.body;
 
-  const listing = await Listing.findById(listingId);
+  const listing = await Listing.findOne({
+    _id: listingId,
+    isDeleted: false,
+  });
   if (!listing) {
     throw new ApiError(404, "Listing not found");
   }
@@ -68,9 +71,11 @@ export const moveWishlistToCart = asyncHandler(async (req, res) => {
   if (!wishlistItem) {
     throw new ApiError(404, "Wishlist item not found");
   }
-
   // Check listing availability
-  const listing = await Listing.findById(wishlistItem.listing);
+  const listing = await Listing.findOne({
+    _id: wishlistItem.listing,
+    isDeleted: false,
+  });
 
   if (!listing || listing.status === "sold") {
     throw new ApiError(400, "Listing is no longer available");

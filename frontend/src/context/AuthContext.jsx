@@ -23,8 +23,10 @@ export function AuthProvider({ children }) {
   }, []);
   
 
-  const login = (newToken) => {
+  const login = (newToken, newUser) => {
     localStorage.setItem('token', newToken);
+    localStorage.setItem("user", JSON.stringify(newUser));
+    setUser(newUser);
     setToken(newToken);
     setIsAuthenticated(true);
   };
@@ -68,6 +70,7 @@ export function AuthProvider({ children }) {
         user,
         login,
         logout,
+        loading,
       }}
     >
       {children}

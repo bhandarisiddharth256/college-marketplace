@@ -38,11 +38,12 @@ export const registerUser = asyncHandler(async (req, res) => {
           name: user.name,
           email: user.email,
           college: user.college,
+          role: user.role,
         },
         token,
       },
-      "User registered successfully"
-    )
+      "User registered successfully",
+    ),
   );
 });
 
@@ -70,10 +71,11 @@ export const loginUser = asyncHandler(async (req, res) => {
           name: user.name,
           email: user.email,
           college: user.college,
+          role: user.role,
         },
         token,
       },
-      "Login successful"
-    )
+      "Login successful",
+    ),
   );
 });

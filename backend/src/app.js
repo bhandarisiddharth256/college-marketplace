@@ -8,16 +8,23 @@ import adminRoutes from "./routes/admin.routes.js";
 import purchaseRoutes from "./routes/purchase.routes.js";
 import cartRoutes from "./routes/cart.routes.js";
 import wishlistRoutes from "./routes/wishlist.routes.js";
-import notificationRoutes from "./routes/notification.routes.js";
 import priceRoutes from "./routes/price.routes.js";
 import refundRoutes from "./routes/refund.routes.js";
 import paymentRoutes from "./routes/payment.routes.js" 
 import chatRoutes from "./routes/chat.routes.js";
-import adminChatRoutes from "./routes/adminChat.routes.js";
 
 const app = express();
 
-app.use(cors());
+const allowedOrigins = [
+ "http://localhost:5173",
+ "https://college-marketplace-k69b.onrender.com"
+];
+
+app.use(cors({
+ origin: allowedOrigins,
+ credentials: true
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -29,14 +36,12 @@ app.use("/api/purchases", purchaseRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/wishlist", wishlistRoutes);
-app.use("/api/notifications", notificationRoutes);
 
 app.use("/api/price", priceRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/refund", refundRoutes);
 
 app.use("/api/chat", chatRoutes);
-app.use("/api/admin/chat", adminChatRoutes);
 
 // ❗ ALWAYS LAST
 app.use(errorHandler);
