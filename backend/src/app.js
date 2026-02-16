@@ -17,13 +17,28 @@ const app = express();
 
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://college-marketplace-5n4cxbj3y.vercel.app"
+  "https://college-marketplace-eight.vercel.app"
 ];
 
+app.use((req,res,next)=>{
+ console.log("ORIGIN:", req.headers.origin);
+ next();
+});
+
 app.use(cors({
- origin: allowedOrigins,
+ origin: function(origin, callback) {
+   if (!origin) return callback(null, true);
+
+   if (allowedOrigins.includes(origin)) {
+     callback(null, true);
+   } else {
+     callback(new Error("CORS BLOCKED"));
+   }
+ },
  credentials: true
 }));
+
+app.options("*", cors());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
