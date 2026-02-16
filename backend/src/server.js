@@ -25,16 +25,15 @@ connectDB();
 const server = http.createServer(app);
 
 /* ---------------- SOCKET.IO SETUP ---------------- */
-const allowedOrigins = [
-  "http://localhost:5173",
-  "https://college-marketplace-eight.vercel.app/login"
-];
-
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
-    credentials: true,
-  },
+    origin: [
+      "http://localhost:5173",
+      "https://college-marketplace-eight.vercel.app"
+    ],
+    methods: ["GET", "POST"],
+    credentials: true
+  }
 });
 
 /* ---------------- SOCKET AUTH MIDDLEWARE ---------------- */
