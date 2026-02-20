@@ -77,7 +77,7 @@ export const getMessages = asyncHandler(async (req, res) => {
 /* 💬 Send message */
 export const sendMessage = asyncHandler(async (req, res) => {
   const { conversationId } = req.params;
-  const { text, listingId } = req.body;
+  const { text, listingId, image } = req.body;
 
   if (!text?.trim() && !image) {
     throw new ApiError(400, "Message cannot be empty");

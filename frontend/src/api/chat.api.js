@@ -14,7 +14,11 @@ export const getMessages = async (conversationId) => {
 
 // Send message (REST fallback – socket primary)
 export const sendMessage = async (conversationId, text, listingId) => {
-  const id = conversationId || "new";
+  if (!listingId && (!conversationId || conversationId === "null")) {
+    throw new ApiError(400, "listingId required");
+  }
+  const id =
+    conversationId && conversationId !== "null" ? conversationId : "new";
 
   const res = await api.post(`/api/chat/${id}/messages`, {
     text,
