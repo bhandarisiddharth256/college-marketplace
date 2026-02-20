@@ -5,6 +5,7 @@ A full-stack web application built for college students to buy, sell, and chat s
 Students can list items (books, electronics, notes, etc.), communicate in real-time with buyers/sellers, manage carts & wishlists, and complete purchases — all in one platform.
 
 🚀 Features
+
 👤 Authentication
 
 JWT based login / signup
@@ -65,20 +66,6 @@ Socket.IO
 JWT Authentication
 Razorpay
 
-Project Structure
-
-COLLEGE_MARKETPLACE
-│
-├── backend
-│   ├── src
-│   ├── package.json
-│
-├── frontend
-│   ├── src
-│   ├── package.json
-│
-└── .gitignore
-
 ⚙️ Environment Variables
 
 Create:
@@ -94,7 +81,6 @@ RAZORPAY_KEY_SECRET=
 
 Siddharth Bhandari
 
-ECE Undergraduate
 Aspiring Full Stack Developer
 
 ⭐ If you like this project, give it a star!
