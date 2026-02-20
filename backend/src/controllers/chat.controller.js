@@ -33,7 +33,7 @@ export const startConversation = asyncHandler(async (req, res) => {
 export const getMyConversations = asyncHandler(async (req, res) => {
   const conversations = await Conversation.find({
     participants: req.user._id,
-    lastMessage: { $exists: true },
+    // lastMessage: { $exists: true },
   })
     .populate("listing", "title price status owner")
     .sort({ updatedAt: -1 });
