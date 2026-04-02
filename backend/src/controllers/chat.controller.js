@@ -148,7 +148,6 @@ export const deleteMessage = asyncHandler(async (req, res) => {
 });
 
 /* 🚩 Report message */
-/* 🚩 Report message */
 export const reportMessage = asyncHandler(async (req, res) => {
   const { messageId } = req.params;
   const { reason } = req.body;

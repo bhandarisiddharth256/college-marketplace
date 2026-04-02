@@ -1,37 +1,54 @@
-import { useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { loginUser } from '../api/auth.api';
-import { isCollegeEmail } from '../utils/validators';
+import { useState } from "react";
+import { Link, Navigate, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { loginUser } from "../api/auth.api";
+import { isCollegeEmail } from "../utils/validators";
 
 function Login() {
   const { isAuthenticated, authLoading, login } = useAuth();
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
-  if (authLoading) return <p className="text-center mt-10">Checking authentication...</p>;
-  if (isAuthenticated) return <Navigate to="/" replace />;
+  // ⏳ Wait until auth state is checked
+  if (authLoading) {
+    return (
+      <p className="text-center mt-10">Checking authentication...</p>
+    );
+  }
+
+  // 🔁 Redirect if already logged in
+  if (isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
+    // ✅ Email validation
     if (!isCollegeEmail(email)) {
-      setError('Please use your college email ID (@college.edu)');
+      setError("Please use your college email ID (@college.edu)");
       return;
     }
 
     setLoading(true);
+
     try {
       const res = await loginUser({ email, password });
-      login(res.data.token, res.data.user); // ✅ REAL JWT
-      navigate('/');
+
+      // ✅ Save token + user in context
+      login(res.data.token, res.data.user);
+
+      // ✅ Redirect after login
+      navigate("/");
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
+      setError(
+        err.response?.data?.message || "Login failed. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -40,13 +57,19 @@ function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-6 rounded shadow w-full max-w-md">
-        <h2 className="text-2xl font-semibold mb-4 text-center">Login</h2>
+
+        <h2 className="text-2xl font-semibold mb-4 text-center">
+          Login
+        </h2>
 
         {error && (
-          <p className="mb-3 text-red-600 text-sm text-center">{error}</p>
+          <p className="mb-3 text-red-600 text-sm text-center">
+            {error}
+          </p>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+
           <input
             type="email"
             placeholder="College Email"
@@ -70,16 +93,21 @@ function Login() {
             disabled={loading}
             className="w-full bg-blue-600 text-white py-2 rounded disabled:opacity-50"
           >
-            {loading ? 'Logging in...' : 'Login'}
+            {loading ? "Logging in..." : "Login"}
           </button>
+
         </form>
 
         <p className="mt-4 text-sm text-center">
-          Don’t have an account?{' '}
-          <a href="/register" className="text-blue-600 underline">
+          Don’t have an account?{" "}
+          <Link
+            to="/register"
+            className="text-blue-600 underline"
+          >
             Register
-          </a>
+          </Link>
         </p>
+
       </div>
     </div>
   );

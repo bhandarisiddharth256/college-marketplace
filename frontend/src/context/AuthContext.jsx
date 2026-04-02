@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import api from '../api/axios';
+import { createContext, useContext, useState, useEffect } from "react";
+import api from "../api/axios";
 
 const AuthContext = createContext(null);
 
@@ -11,36 +11,36 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('token');
+    const storedToken = localStorage.getItem("token");
 
     if (storedToken) {
       setToken(storedToken);
-      setIsAuthenticated(true);
     }
 
-    // auth check finished
     setAuthLoading(false);
   }, []);
-  
 
   const login = (newToken, newUser) => {
-    localStorage.setItem('token', newToken);
+    localStorage.setItem("token", newToken);
     localStorage.setItem("user", JSON.stringify(newUser));
     setUser(newUser);
     setToken(newToken);
     setIsAuthenticated(true);
   };
- 
+
   const logout = () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem("token");
+    localStorage.removeItem("user"); // ✅ ADD THIS
     setToken(null);
+    setUser(null); // ✅ ADD THIS
     setIsAuthenticated(false);
   };
-  
+
   useEffect(() => {
     const fetchMe = async () => {
       if (!token) {
         setUser(null);
+        setIsAuthenticated(false); // ✅ ADD THIS
         setLoading(false);
         return;
       }
@@ -48,11 +48,16 @@ export function AuthProvider({ children }) {
       try {
         const res = await api.get("/api/users/me");
 
-        // 🔥 THIS LINE IS THE KEY
         setUser(res.data.data);
+        setIsAuthenticated(true); // ✅ MOVE HERE (ONLY on success)
       } catch (err) {
         console.error("Auth fetch error:", err);
+
+        // 🔥 CRITICAL FIX
+        localStorage.removeItem("token");
+        setToken(null);
         setUser(null);
+        setIsAuthenticated(false);
       } finally {
         setLoading(false);
       }

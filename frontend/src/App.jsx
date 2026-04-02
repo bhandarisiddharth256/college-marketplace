@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import { AuthProvider } from "./context/AuthContext";
@@ -28,7 +28,6 @@ import { useLocation } from "react-router-dom";
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
         <Header />
         <Routes>
           {/* 🌐 Public */}
@@ -151,7 +150,6 @@ function App() {
           </Route>
         </Routes>
         {/* <Footer /> */}
-      </BrowserRouter>
     </AuthProvider>
   );
 }

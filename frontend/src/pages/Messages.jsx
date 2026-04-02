@@ -24,6 +24,7 @@ function Messages() {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const [onlineUsers, setOnlineUsers] = useState(new Set());
+  const [startingListingId, setStartingListingId] = useState(null);
   const [selectedMsg, setSelectedMsg] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [reportReason, setReportReason] = useState("");
@@ -132,7 +133,7 @@ function Messages() {
 
   /* ---------------- LOAD MESSAGES ---------------- */
   useEffect(() => {
-    if (!activeConversation) return;
+    if (!activeConversation?._id) return;
 
     const loadMessages = async () => {
       try {
@@ -212,6 +213,7 @@ function Messages() {
   useEffect(() => {
     scrollToBottom();
   }, [activeConversation]);
+  
   const handleMessageClick = (msg) => {
     setSelectedMsg(msg);
     setShowModal(true);
