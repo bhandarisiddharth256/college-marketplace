@@ -10,6 +10,7 @@ import socketAuth from "./socket/auth.socket.js";
 
 import Message from "./models/Message.model.js";
 import Conversation from "./models/Conversation.model.js";
+import Listing from "./models/Listing.model.js";
 
 /* ---------------- ES MODULE DIR FIX ---------------- */
 const __filename = fileURLToPath(import.meta.url);
@@ -29,14 +30,14 @@ const io = new Server(server, {
   cors: {
     origin: [
       "http://localhost:5173",
-      "https://college-marketplace-eight.vercel.app"
+      "https://college-marketplace-eight.vercel.app",
     ],
     methods: ["GET", "POST"],
-    credentials: true
-  }
+    credentials: true,
+  },
 });
 
-/* ---------------- SOCKET AUTH MIDDLEWARE ---------------- */
+/* ---------------- SOCKET AUTH ---------------- */
 io.use(socketAuth);
 
 /* ---------------- ONLINE USERS ---------------- */
@@ -47,10 +48,9 @@ io.on("connection", (socket) => {
   try {
     const userId = socket.user._id.toString();
 
-    // Mark user online
+    /* -------- USER ONLINE -------- */
     onlineUsers.set(userId, socket.id);
     console.log(`🟢 ${socket.user.name} is online`);
-
     io.emit("userOnline", userId);
 
     /* -------- JOIN CONVERSATION -------- */
@@ -60,13 +60,20 @@ io.on("connection", (socket) => {
 
         if (
           conversation &&
-          conversation.participants.some((p) => p.toString() === userId)
+          conversation.participants.some(
+            (p) => p.toString() === userId
+          )
         ) {
           socket.join(conversationId);
         }
       } catch (err) {
         console.error("Join conversation error:", err);
       }
+    });
+
+    /* -------- LEAVE CONVERSATION (FIX ADDED) -------- */
+    socket.on("leaveConversation", (conversationId) => {
+      socket.leave(conversationId);
     });
 
     /* -------- TYPING INDICATOR -------- */
@@ -87,21 +94,29 @@ io.on("connection", (socket) => {
     /* -------- SEND MESSAGE -------- */
     socket.on("sendMessage", async ({ conversationId, text, image }) => {
       try {
+        // ❌ empty message block
         if ((!text || !text.trim()) && !image) return;
 
         const conversation = await Conversation.findById(conversationId);
         if (!conversation) return;
 
-        // Authorization check
+        // 🔒 Authorization check
         const isParticipant = conversation.participants.some(
-          (p) => p.toString() === userId,
+          (p) => p.toString() === userId
         );
         if (!isParticipant) return;
+
+        // 🔥 SOLD CHECK
+        const listing = await Listing.findById(conversation.listing);
+        if (!listing || listing?.status === "sold") {
+          socket.emit("errorMessage", "Item unavailable.");
+          return;
+        }
 
         // Ensure sender is in room
         socket.join(conversationId);
 
-        // Save message
+        // 💬 Save message
         const message = await Message.create({
           conversation: conversationId,
           sender: socket.user._id,
@@ -109,14 +124,15 @@ io.on("connection", (socket) => {
           image,
         });
 
-        // Update last message
-        conversation.lastMessage = text;
+        // 📝 Update last message
+        conversation.lastMessage = text || "📷 Image";
 
-        // Update unread count for other participants
+        // 🔔 Update unread count
         conversation.participants.forEach((participantId) => {
           const pid = participantId.toString();
           if (pid !== userId) {
-            const currentUnread = conversation.unreadCount?.get(pid) || 0;
+            const currentUnread =
+              conversation.unreadCount?.get(pid) || 0;
             conversation.unreadCount.set(pid, currentUnread + 1);
           }
         });
@@ -124,15 +140,17 @@ io.on("connection", (socket) => {
         conversation.markModified("unreadCount");
         await conversation.save();
 
-        // Emit message
-        io.to(conversationId).emit("newMessage", {
+        // 🔥 CLEAN EMIT
+        const messageData = {
           _id: message._id,
           conversation: conversationId,
           sender: socket.user._id.toString(),
           text,
           image,
           createdAt: message.createdAt,
-        });
+        };
+
+        io.to(conversationId).emit("newMessage", messageData);
       } catch (err) {
         console.error("Send message error:", err);
       }
@@ -144,9 +162,11 @@ io.on("connection", (socket) => {
         const message = await Message.findById(messageId);
         if (!message) return;
 
-        if (message.sender.toString() !== socket.user._id.toString()) return;
+        if (
+          message.sender.toString() !== socket.user._id.toString()
+        )
+          return;
 
-        // SAVE OLD TEXT
         const oldText = message.text;
 
         message.isDeleted = true;
@@ -157,15 +177,16 @@ io.on("connection", (socket) => {
 
         const convo = await Conversation.findById(message.conversation);
 
-        // UPDATE SIDEBAR LAST MESSAGE
+        // Update sidebar last message
         if (convo && convo.lastMessage === oldText) {
           convo.lastMessage = "This message was deleted";
           await convo.save();
         }
 
-        io.to(message.conversation.toString()).emit("messageDeleted", {
-          messageId,
-        });
+        io.to(message.conversation.toString()).emit(
+          "messageDeleted",
+          { messageId }
+        );
       } catch (err) {
         console.error("Delete message error:", err);
       }
@@ -184,6 +205,7 @@ io.on("connection", (socket) => {
 
 /* ---------------- START SERVER ---------------- */
 const PORT = process.env.PORT || 5000;
+
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });

@@ -13,27 +13,37 @@ export const startConversation = asyncHandler(async (req, res) => {
     _id: listingId,
     isDeleted: false,
   });
+
   if (!listing) throw new ApiError(404, "Listing not found");
 
   if (listing.owner.toString() === req.user._id.toString()) {
     throw new ApiError(400, "You cannot chat on your own listing");
   }
 
-  const conversation = await Conversation.findOne({
-    listing: listingId,
-    participants: { $all: [req.user._id, listing.owner] },
-  });
+  // 🔥 Atomic create or get (best practice)
+  const conversation = await Conversation.findOneAndUpdate(
+    {
+      listing: listingId,
+      buyer: req.user._id,
+    },
+    {
+      $setOnInsert: {
+        seller: listing.owner,
+        participants: [req.user._id, listing.owner],
+      },
+    },
+    { new: true, upsert: true }
+  );
 
   return res
     .status(200)
-    .json(new ApiResponse(200, conversation || null, "Conversation ready"));
+    .json(new ApiResponse(200, conversation, "Conversation ready"));
 });
 
 /* 💬 Get my conversations */
 export const getMyConversations = asyncHandler(async (req, res) => {
   const conversations = await Conversation.find({
     participants: req.user._id,
-    // lastMessage: { $exists: true },
   })
     .populate("listing", "title price status owner")
     .sort({ updatedAt: -1 });
@@ -52,16 +62,16 @@ export const getMessages = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Conversation not found");
   }
 
-  // ✅ Correct authorization check
+  // 🔒 Authorization check
   const isParticipant = conversation.participants.some(
-    (id) => id.toString() === req.user._id.toString(),
+    (id) => id.toString() === req.user._id.toString()
   );
 
   if (!isParticipant) {
     throw new ApiError(403, "Not allowed to access this chat");
   }
 
-  // ✅ Reset unread count for this user
+  // 🔔 Reset unread count
   conversation.unreadCount.set(req.user._id.toString(), 0);
   await conversation.save();
 
@@ -85,19 +95,28 @@ export const sendMessage = asyncHandler(async (req, res) => {
 
   let conversation = null;
 
+  // 🔍 Try existing conversation
   if (conversationId && conversationId !== "null" && conversationId !== "new") {
     conversation = await Conversation.findById(conversationId);
   }
 
+  // 🔥 Create conversation if not exists
   if (!conversation) {
+    if (!listingId) {
+      throw new ApiError(400, "ListingId required");
+    }
+
     const listing = await Listing.findOne({
       _id: listingId,
       isDeleted: false,
     });
+
     if (!listing) throw new ApiError(404, "Listing not found");
 
     conversation = await Conversation.create({
       listing: listingId,
+      buyer: req.user._id,
+      seller: listing.owner,
       participants: [req.user._id, listing.owner],
       unreadCount: {
         [listing.owner.toString()]: 1,
@@ -105,14 +124,34 @@ export const sendMessage = asyncHandler(async (req, res) => {
     });
   }
 
+  // 🔒 Authorization check
+  const isParticipant = conversation.participants.some(
+    (id) => id.toString() === req.user._id.toString()
+  );
+
+  if (!isParticipant) {
+    throw new ApiError(403, "Not allowed");
+  }
+
+  // 🔥 Check if item is sold
+  const listingDoc = await Listing.findById(conversation.listing);
+
+  if (listingDoc.status === "sold") {
+    throw new ApiError(400, "Item is sold. Chat disabled.");
+  }
+
+  // 💬 Create message
   const message = await Message.create({
     conversation: conversation._id,
     sender: req.user._id,
     text,
+    image,
   });
 
+  // 📝 Update last message
   conversation.lastMessage = text;
 
+  // 🔔 Update unread count
   conversation.participants.forEach((id) => {
     if (id.toString() !== req.user._id.toString()) {
       const curr = conversation.unreadCount.get(id.toString()) || 0;
@@ -123,7 +162,9 @@ export const sendMessage = asyncHandler(async (req, res) => {
   conversation.markModified("unreadCount");
   await conversation.save();
 
-  res.status(201).json(new ApiResponse(201, message, "Sent"));
+  return res
+    .status(201)
+    .json(new ApiResponse(201, message, "Sent"));
 });
 
 /* 🗑 Delete message */
@@ -133,7 +174,6 @@ export const deleteMessage = asyncHandler(async (req, res) => {
   const message = await Message.findById(messageId);
   if (!message) throw new ApiError(404, "Message not found");
 
-  // Only sender can delete
   if (message.sender.toString() !== req.user._id.toString()) {
     throw new ApiError(403, "Not allowed to delete this message");
   }
@@ -144,7 +184,9 @@ export const deleteMessage = asyncHandler(async (req, res) => {
 
   await message.save();
 
-  res.status(200).json(new ApiResponse(200, null, "Message deleted"));
+  return res
+    .status(200)
+    .json(new ApiResponse(200, null, "Message deleted"));
 });
 
 /* 🚩 Report message */
@@ -166,6 +208,7 @@ export const reportMessage = asyncHandler(async (req, res) => {
 
   await message.save();
 
-  res.status(200).json(new ApiResponse(200, null, "Reported"));
+  return res
+    .status(200)
+    .json(new ApiResponse(200, null, "Reported"));
 });
-

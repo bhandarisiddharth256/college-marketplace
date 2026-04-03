@@ -8,11 +8,24 @@ const conversationSchema = new mongoose.Schema(
       required: true,
     },
 
+    // 🔥 Explicit roles (VERY IMPORTANT)
+    buyer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
+    seller: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
+    // Optional but useful for queries
     participants: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
-        required: true,
       },
     ],
 
@@ -30,9 +43,12 @@ const conversationSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// 🔒 One conversation per listing per buyer
+//
+// 🔥 CORRECT UNIQUE INDEX
+// Same buyer cannot create multiple chats for same listing
+//
 conversationSchema.index(
-  { listing: 1, participants: 1 },
+  { listing: 1, buyer: 1 },
   { unique: true }
 );
 

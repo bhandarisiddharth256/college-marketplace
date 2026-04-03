@@ -111,7 +111,9 @@ function Messages() {
   useEffect(() => {
     if (!listingId) return;
 
-    const existing = conversations.find((c) => c.listing?._id === listingId);
+    const existing = conversations.find(
+      (c) => c.listing?._id === listingId && c.buyer === userId,
+    );
 
     if (existing) {
       setActiveConversation(existing);
@@ -149,7 +151,8 @@ function Messages() {
 
   /* ---------------- SEND MESSAGE (OPTIMISTIC) ---------------- */
   const handleSend = async () => {
-    if (!text.trim() || !userId) return;
+    if ((!text.trim() && selectedImages.length === 0) || !userId) return;
+    if (activeConversation?.listing?.status === "sold") return;
 
     const tempMessage = {
       _id: "temp-" + Date.now(),
@@ -169,7 +172,9 @@ function Messages() {
 
       // 🔥 VERY IMPORTANT: replace temp conversation with real one
       if (!activeConversation?._id) {
-        const created = updated.data.find((c) => c.listing?._id === listingId);
+        const created = updated.data.find(
+          (c) => c.listing?._id === listingId && c.buyer === userId,
+        );
 
         if (created) {
           setActiveConversation(created);
@@ -213,7 +218,7 @@ function Messages() {
   useEffect(() => {
     scrollToBottom();
   }, [activeConversation]);
-  
+
   const handleMessageClick = (msg) => {
     setSelectedMsg(msg);
     setShowModal(true);
@@ -358,8 +363,9 @@ function Messages() {
 
                   {/* SOLD INFO BANNER */}
                   {isItemSold && (
-                    <div className="mb-3 p-3 rounded bg-red-50 border border-red-300 text-red-700 text-sm">
-                      This item has been sold. Chat is no longer available.
+                    <div className="mb-3 p-3 rounded bg-red-50 border border-red-300 text-red-700 text-sm text-center">
+                      🚫 This item has been sold. You can no longer send
+                      messages.
                     </div>
                   )}
                 </>
@@ -430,11 +436,13 @@ function Messages() {
                     ...Array.from(e.target.files),
                   ])
                 }
+                disabled={activeConversation?.listing?.status === "sold"}
               />
 
               {/* Add Image Button */}
               <button
                 onClick={() => document.getElementById("imagePicker").click()}
+                disabled={activeConversation?.listing?.status === "sold"}
                 className="px-3 border rounded"
               >
                 📎
@@ -443,6 +451,7 @@ function Messages() {
               <input
                 value={text}
                 onChange={(e) => setText(e.target.value)}
+                disabled={activeConversation?.listing?.status === "sold"}
                 className="flex-1 border p-2 rounded"
                 placeholder="Type message..."
               />
