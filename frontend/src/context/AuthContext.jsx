@@ -1,24 +1,22 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect } from "react";
 import api from "../api/axios";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const storedToken = localStorage.getItem("token");
-
-    if (storedToken) {
-      setToken(storedToken);
+  const [token, setToken] = useState(() => localStorage.getItem("token"));
+  const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem("token"));
+  const [user, setUser] = useState(() => {
+    const storedUser = localStorage.getItem("user");
+    try {
+      return storedUser ? JSON.parse(storedUser) : null;
+    } catch {
+      return null;
     }
-
-    setAuthLoading(false);
-  }, []);
+  });
+  const [loading, setLoading] = useState(() => !!localStorage.getItem("token"));
+  const [authLoading] = useState(false);
 
   const login = (newToken, newUser) => {
     localStorage.setItem("token", newToken);
@@ -50,6 +48,7 @@ export function AuthProvider({ children }) {
         setUser(res.data.data);
         setIsAuthenticated(true);
       } catch (err) {
+        console.error("fetchMe failed:", err.response?.status, err.message);
         // Only clear auth on 401, not network/timeout errors
         if (err.response?.status === 401) {
           localStorage.removeItem("token");

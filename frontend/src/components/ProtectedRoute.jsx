@@ -1,14 +1,15 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 function ProtectedRoute({ children, adminOnly = false }) {
   const { isAuthenticated, user, loading } = useAuth();
+  const location = useLocation();
 
-  // Wait until auth loads
   if (loading) return null;
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" />;
+    // Save where user was trying to go
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   if (adminOnly && user?.role !== "admin") {

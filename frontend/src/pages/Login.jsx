@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { loginUser } from "../api/auth.api";
 import { isCollegeEmail } from "../utils/validators";
@@ -7,7 +7,8 @@ import { isCollegeEmail } from "../utils/validators";
 function Login() {
   const { isAuthenticated, authLoading, login } = useAuth();
   const navigate = useNavigate();
-
+  const location = useLocation();
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,7 +23,8 @@ function Login() {
 
   // 🔁 Redirect if already logged in
   if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+    const from = location.state?.from?.pathname || "/";
+    return <Navigate to={from} replace />;
   }
 
   const handleSubmit = async (e) => {
@@ -44,7 +46,8 @@ function Login() {
       login(res.data.token, res.data.user);
 
       // ✅ Redirect after login
-      navigate("/");
+      const from = location.state?.from?.pathname || "/";
+      navigate(from, { replace: true });
     } catch (err) {
       setError(
         err.response?.data?.message || "Login failed. Please try again."
