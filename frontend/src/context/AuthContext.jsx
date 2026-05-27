@@ -40,24 +40,34 @@ export function AuthProvider({ children }) {
     const fetchMe = async () => {
       if (!token) {
         setUser(null);
-        setIsAuthenticated(false); // ✅ ADD THIS
+        setIsAuthenticated(false);
         setLoading(false);
         return;
       }
 
       try {
-        const res = await api.get("/api/users/me");
-
+        const res = await api.get("/api/users/me", { timeout: 15000 }); // wait 15s
         setUser(res.data.data);
-        setIsAuthenticated(true); // ✅ MOVE HERE (ONLY on success)
+        setIsAuthenticated(true);
       } catch (err) {
-        console.error("Auth fetch error:", err);
-
-        // 🔥 CRITICAL FIX
-        localStorage.removeItem("token");
-        setToken(null);
-        setUser(null);
-        setIsAuthenticated(false);
+        // Only clear auth on 401, not network/timeout errors
+        if (err.response?.status === 401) {
+          localStorage.removeItem("token");
+          setToken(null);
+          setUser(null);
+          setIsAuthenticated(false);
+        } else {
+          // Network error / timeout / Render cold start — keep user logged in
+          const storedUser = localStorage.getItem("user");
+          try {
+            if (storedUser) setUser(JSON.parse(storedUser));
+            setIsAuthenticated(true);
+          } catch {
+            // corrupt JSON in localStorage
+            localStorage.removeItem("user");
+            setIsAuthenticated(false);
+          }
+        }
       } finally {
         setLoading(false);
       }
