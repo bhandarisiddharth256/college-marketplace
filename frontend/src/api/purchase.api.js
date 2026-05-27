@@ -1,4 +1,4 @@
-import api from './axios';// 👈 use SAME axios file you use elsewhere
+import api from './axios';// 
 
 export const getMyPurchases = () => {
   return api.get("/api/purchases/my/bought");
