@@ -28,12 +28,13 @@ function Messages() {
   const [selectedMsg, setSelectedMsg] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [reportReason, setReportReason] = useState("");
+  const [sendingMessageId, setSendingMessageId] = useState(null);
   const messagesEndRef = useRef(null);
 
-  /* ---------------- SOCKET CONNECT ---------------- */
+  /* ---------------- SOCKET CONNECT & ERROR HANDLING -------- */
 
   useEffect(() => {
-    connectSocket(); // <-- IMPORTANT
+    connectSocket();
 
     socket.on("connect", () => {
       console.log("✅ Socket connected:", socket.id);
@@ -43,7 +44,21 @@ function Messages() {
       console.error("❌ Socket error:", err.message);
     });
 
+    // Handle error messages from server
+    socket.on("errorMessage", (message) => {
+      console.error("❌ Server error:", message);
+      alert("Chat error: " + message);
+    });
+
+    socket.on("messageSent", ({ messageId }) => {
+      console.log("✅ Message confirmed sent:", messageId);
+    });
+
     return () => {
+      socket.off("connect");
+      socket.off("connect_error");
+      socket.off("errorMessage");
+      socket.off("messageSent");
       socket.disconnect();
     };
   }, []);
@@ -72,7 +87,7 @@ function Messages() {
   useEffect(() => {
     if (!activeConversation) return;
 
-    socket.emit("joinConversation", activeConversation._id);
+    joinConversationRoom(activeConversation._id);
 
     return () => {
       socket.emit("leaveConversation", activeConversation._id);
@@ -82,23 +97,36 @@ function Messages() {
   /* ---------------- REAL-TIME MESSAGE LISTENER ---------------- */
   useEffect(() => {
     socket.on("newMessage", (message) => {
+      console.log("🔔 New message received:", message._id);
       setMessages((prev) => {
         const exists = prev.some((m) => m._id === message._id);
-        return exists ? prev : [...prev, message];
+        if (exists) {
+          console.log("⚠️ Message already exists, skipping");
+          return prev;
+        }
+
+        const filtered = prev.filter((m) => m._id !== sendingMessageId);
+        return [...filtered, message];
       });
+      setSendingMessageId(null);
     });
 
     return () => {
       socket.off("newMessage");
     };
-  }, []);
+  }, [sendingMessageId]);
 
-  /* ---------------- LOAD CONVERSATIONS ---------------- */
+  /* ---------------- LOAD CONVERSATIONS & JOIN ROOMS -------- */
   useEffect(() => {
     const loadConversations = async () => {
       try {
         const res = await getMyConversations();
         setConversations(res.data || []);
+
+        // 🔥 JOIN ALL CONVERSATION ROOMS SO WE GET REAL-TIME UPDATES
+        res.data?.forEach((conv) => {
+          joinConversationRoom(conv._id);
+        });
       } catch {
         console.error("Failed to load conversations");
       }
@@ -107,18 +135,31 @@ function Messages() {
     loadConversations();
   }, []);
 
-  /* ---------------- START CONVERSATION FROM LISTING ---------------- */
+  /* ---------------- START CONVERSATION FROM LISTING -------- */
   useEffect(() => {
     if (!listingId) return;
 
+    // Only auto-select listing conversation if no conversation is currently active
+    // or if the active conversation is also from the same listing
+    if (
+      activeConversation &&
+      activeConversation._id !== null &&
+      activeConversation.listing?._id !== listingId
+    ) {
+      // User is viewing a different conversation, don't override
+      return;
+    }
+
     const existing = conversations.find(
-      (c) => c.listing?._id === listingId && c.buyer === userId,
+      (c) =>
+        c.listing?._id === listingId &&
+        c.participants?.some((id) => id === userId),
     );
 
     if (existing) {
       setActiveConversation(existing);
-    } else {
-      // create TEMP conversation so chat UI opens
+    } else if (!activeConversation || activeConversation.listing?._id === listingId) {
+      // Only create temp if we're not viewing another listing's chat
       setActiveConversation({
         _id: null,
         listing: {
@@ -128,10 +169,9 @@ function Messages() {
         participants: [],
         unreadCount: {},
       });
-
       setMessages([]);
     }
-  }, [listingId, conversations]);
+  }, [listingId, conversations, userId]);
 
   /* ---------------- LOAD MESSAGES ---------------- */
   useEffect(() => {
@@ -151,38 +191,73 @@ function Messages() {
 
   /* ---------------- SEND MESSAGE (OPTIMISTIC) ---------------- */
   const handleSend = async () => {
-    if ((!text.trim() && selectedImages.length === 0) || !userId) return;
-    if (activeConversation?.listing?.status === "sold") return;
+    const trimmedText = text.trim();
 
+    if (!userId) return;
+    if (activeConversation?.listing?.status === "sold") return;
+    if (selectedImages.length > 0) {
+      alert("Image messaging is not supported yet.");
+      return;
+    }
+    if (!trimmedText) return;
+
+    const tempId = "temp-" + Date.now();
     const tempMessage = {
-      _id: "temp-" + Date.now(),
+      _id: tempId,
       sender: userId,
-      text,
+      text: trimmedText,
     };
 
+    console.log("📤 Sending message:", tempId);
+    setSendingMessageId(tempId);
     setMessages((prev) => [...prev, tempMessage]);
     setText("");
 
     try {
-      await sendMessage(activeConversation?._id, text, listingId);
+      console.log("📡 Calling API with conversation:", activeConversation?._id);
+      const result = await sendMessage(
+        activeConversation?._id,
+        tempMessage.text,
+        listingId
+      );
+
+      console.log("✅ API response:", result);
 
       const updated = await getMyConversations();
-
       setConversations(updated.data);
 
-      // 🔥 VERY IMPORTANT: replace temp conversation with real one
+      // 🔥 VERY IMPORTANT: replace temp conversation with real one if newly created
       if (!activeConversation?._id) {
         const created = updated.data.find(
-          (c) => c.listing?._id === listingId && c.buyer === userId,
+          (c) => c.listing?._id === listingId && c.buyer === userId
         );
 
         if (created) {
+          console.log("✅ Created new conversation:", created._id);
           setActiveConversation(created);
+          // Join the new conversation room immediately
+          socket.emit("joinConversation", created._id);
+          console.log("✅ Joined room:", created._id);
         }
       }
+
+      // Wait a bit for socket event, then remove temp if real didn't arrive
+      setTimeout(() => {
+        setMessages((prev) => {
+          const stillHasTemp = prev.some((m) => m._id === tempId);
+          if (stillHasTemp) {
+            console.log("⚠️ Real message didn't arrive, removing temp");
+            return prev.filter((m) => m._id !== tempId);
+          }
+          return prev;
+        });
+        setSendingMessageId(null);
+      }, 3000);
     } catch (err) {
-      alert("Failed to send message");
-      setMessages((prev) => prev.filter((m) => m._id !== tempMessage._id));
+      console.error("❌ Send error:", err);
+      alert("Failed to send message: " + (err.message || "Unknown error"));
+      setMessages((prev) => prev.filter((m) => m._id !== tempId));
+      setSendingMessageId(null);
     }
   };
 
@@ -209,6 +284,29 @@ function Messages() {
       );
     });
     return () => socket.off("messageDeleted");
+  }, [activeConversation?._id]);
+
+  /* -------- CONVERSATION UPDATE REALTIME (SIDEBAR) -------- */
+  useEffect(() => {
+    socket.on("conversationUpdated", ({ conversation }) => {
+      setConversations((prev) => {
+        // If conversation exists, update it; otherwise add it
+        const exists = prev.find((c) => c._id === conversation._id);
+        if (exists) {
+          return prev.map((c) =>
+            c._id === conversation._id ? conversation : c
+          );
+        }
+        // Add new conversation to the top
+        return [conversation, ...prev];
+      });
+
+      setActiveConversation((prev) =>
+        prev && prev._id === conversation._id ? conversation : prev
+      );
+    });
+
+    return () => socket.off("conversationUpdated");
   }, []);
 
   useEffect(() => {
@@ -230,6 +328,22 @@ function Messages() {
 
   const getOtherUserId = (conv) =>
     conv.participants.find((id) => id !== userId);
+
+  const joinConversationRoom = (conversationId) => {
+    if (!conversationId) return;
+
+    if (socket.connected) {
+      socket.emit("joinConversation", conversationId);
+      return;
+    }
+
+    const onConnect = () => {
+      socket.emit("joinConversation", conversationId);
+      socket.off("connect", onConnect);
+    };
+
+    socket.on("connect", onConnect);
+  };
 
   /* ================= RENDER ================= */
   return (

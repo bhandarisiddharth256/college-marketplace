@@ -4,6 +4,7 @@ import Listing from "../models/Listing.model.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import { io } from "../app.js";
 
 /* 💬 Start or get conversation for a listing */
 export const startConversation = asyncHandler(async (req, res) => {
@@ -162,6 +163,31 @@ export const sendMessage = asyncHandler(async (req, res) => {
   conversation.markModified("unreadCount");
   await conversation.save();
 
+  // 🔥 EMIT SOCKET EVENT TO BROADCAST MESSAGE
+  if (io) {
+    const messageData = {
+      _id: message._id,
+      conversation: conversation._id.toString(),
+      sender: req.user._id.toString(),
+      text,
+      image,
+      createdAt: message.createdAt,
+      isDeleted: false,
+    };
+
+    // ✅ Emit to all participants in the conversation room
+    io.to(conversation._id.toString()).emit("newMessage", messageData);
+
+    // ✅ Also emit conversation update for sidebar
+    const updatedConversation = await Conversation.findById(
+      conversation._id
+    ).populate("listing", "title price status owner");
+
+    io.to(conversation._id.toString()).emit("conversationUpdated", {
+      conversation: updatedConversation,
+    });
+  }
+
   return res
     .status(201)
     .json(new ApiResponse(201, message, "Sent"));
@@ -183,6 +209,13 @@ export const deleteMessage = asyncHandler(async (req, res) => {
   message.image = null;
 
   await message.save();
+
+  // 🔥 EMIT SOCKET EVENT
+  if (io) {
+    io.to(message.conversation.toString()).emit("messageDeleted", {
+      messageId: message._id,
+    });
+  }
 
   return res
     .status(200)

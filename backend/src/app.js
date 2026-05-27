@@ -15,6 +15,13 @@ import chatRoutes from "./routes/chat.routes.js";
 
 const app = express();
 
+// 🔥 Socket.io instance will be injected here
+export let io = null;
+
+export const setIO = (ioInstance) => {
+  io = ioInstance;
+};
+
 const allowedOrigins = [
   "http://localhost:5173",
   "https://college-marketplace-eight.vercel.app"

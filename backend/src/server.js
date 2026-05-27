@@ -4,7 +4,7 @@ import { fileURLToPath } from "url";
 import http from "http";
 import { Server } from "socket.io";
 
-import app from "./app.js";
+import app, { setIO } from "./app.js";
 import connectDB from "./config/db.js";
 import socketAuth from "./socket/auth.socket.js";
 
@@ -36,7 +36,8 @@ const io = new Server(server, {
     credentials: true,
   },
 });
-
+// 🔥 Inject io into app
+setIO(io);
 /* ---------------- SOCKET AUTH ---------------- */
 io.use(socketAuth);
 
@@ -94,29 +95,38 @@ io.on("connection", (socket) => {
     /* -------- SEND MESSAGE -------- */
     socket.on("sendMessage", async ({ conversationId, text, image }) => {
       try {
-        // ❌ empty message block
-        if ((!text || !text.trim()) && !image) return;
+        // Check for empty message
+        if ((!text || !text.trim()) && !image) {
+          socket.emit("errorMessage", "Message cannot be empty");
+          return;
+        }
 
         const conversation = await Conversation.findById(conversationId);
-        if (!conversation) return;
+        if (!conversation) {
+          socket.emit("errorMessage", "Conversation not found");
+          return;
+        }
 
-        // 🔒 Authorization check
+        // Authorization check
         const isParticipant = conversation.participants.some(
           (p) => p.toString() === userId
         );
-        if (!isParticipant) return;
+        if (!isParticipant) {
+          socket.emit("errorMessage", "Not authorized");
+          return;
+        }
 
-        // 🔥 SOLD CHECK
+        // Check if item is sold
         const listing = await Listing.findById(conversation.listing);
         if (!listing || listing?.status === "sold") {
-          socket.emit("errorMessage", "Item unavailable.");
+          socket.emit("errorMessage", "Item is no longer available");
           return;
         }
 
         // Ensure sender is in room
         socket.join(conversationId);
 
-        // 💬 Save message
+        // Save message
         const message = await Message.create({
           conversation: conversationId,
           sender: socket.user._id,
@@ -124,10 +134,10 @@ io.on("connection", (socket) => {
           image,
         });
 
-        // 📝 Update last message
+        // Update last message
         conversation.lastMessage = text || "📷 Image";
 
-        // 🔔 Update unread count
+        // Update unread count
         conversation.participants.forEach((participantId) => {
           const pid = participantId.toString();
           if (pid !== userId) {
@@ -140,7 +150,7 @@ io.on("connection", (socket) => {
         conversation.markModified("unreadCount");
         await conversation.save();
 
-        // 🔥 CLEAN EMIT
+        // Emit to all participants in the room
         const messageData = {
           _id: message._id,
           conversation: conversationId,
@@ -148,11 +158,24 @@ io.on("connection", (socket) => {
           text,
           image,
           createdAt: message.createdAt,
+          isDeleted: false,
         };
 
         io.to(conversationId).emit("newMessage", messageData);
+        
+        // Emit conversation update for sidebar
+        const updatedConversation = await Conversation.findById(
+          conversationId
+        ).populate("listing", "title price status owner");
+        
+        io.to(conversationId).emit("conversationUpdated", {
+          conversation: updatedConversation,
+        });
+        
+        socket.emit("messageSent", { messageId: message._id });
       } catch (err) {
         console.error("Send message error:", err);
+        socket.emit("errorMessage", "Failed to send message");
       }
     });
 
