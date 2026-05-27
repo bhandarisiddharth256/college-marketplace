@@ -1,86 +1,174 @@
-📚 College Marketplace
+# 📚 College Marketplace
 
-A full-stack web application built for college students to buy, sell, and chat securely within their campus community.
+A **full-stack marketplace platform** designed for college students to **buy, sell, and chat securely within their campus community**.
 
-Students can list items (books, electronics, notes, etc.), communicate in real-time with buyers/sellers, manage carts & wishlists, and complete purchases — all in one platform.
+This application enables students to list products, communicate in real-time, manage purchases, and complete transactions — all in one place.
 
-🚀 Features
+---
 
-👤 Authentication
+## 🌐 Live Demo
 
-JWT based login / signup
-Protected routes
-User profile management
+* 🔗 Frontend: https://college-marketplace-eight.vercel.app
+* 🔗 Backend API: https://college-marketplace-k69b.onrender.com
 
-🛒 Marketplace
+---
 
-Create / Edit / Delete listings
-Upload product images
-Mark items as Sold
-Category + condition support
-Prevent users from buying their own listings
+## ✨ Key Features
 
-❤️ Wishlist & Cart
+### 👤 Authentication & Security
 
-Add / remove items from wishlist
-Add / remove items from cart
-Auto-remove sold items from cart/wishlist
+* JWT-based authentication (Login / Signup)
+* Protected routes with role-based access (User/Admin)
+* Persistent login with token storage
+* Secure API access
 
-💬 Real-Time Chat (Socket.IO)
+---
 
-Buyer ↔ Seller messaging
-Online / Offline indicators
-Typing indicators
-Unread message count
-Optimistic UI updates
-Chat disabled automatically when item is sold
+### 🛒 Marketplace System
 
-💰 Payments (Razorpay Integration)
+* Create, edit, and delete listings
+* Upload product images
+* Mark items as **Sold**
+* Category & condition filtering
+* Prevent users from purchasing their own listings
 
-Create order
-Verify payment
-Secure checkout flow
+---
 
-🎨 Frontend UI
+### ❤️ Wishlist & Cart
 
-Responsive layout (Tailwind CSS)
-Modern hero section
-Search + filters
-Profile dropdown
-Marketplace filters
+* Add/remove items from wishlist
+* Add/remove items from cart
+* Auto-remove sold items
+* Seamless user experience across sessions
 
-🛠 Tech Stack
-Frontend
+---
 
-React + Vite
-Tailwind CSS
-Axios
-Socket.IO Client
+### 💬 Real-Time Chat System (Core Highlight 🚀)
 
-Backend
+* One-to-one **Buyer ↔ Seller conversations**
+* **Multiple buyers per listing supported**
+* Real-time messaging using Socket.IO
+* online/offline status
+* Unread message count per user
+* Optimistic UI updates
+* **Chat disabled automatically when item is sold**
 
-Node.js
-Express.js
-MongoDB + Mongoose
-Socket.IO
-JWT Authentication
-Razorpay
+---
 
-⚙️ Environment Variables
+### 💰 Payment Integration
 
-Create:
+* Razorpay payment gateway integration
+* Order creation & verification
+* Secure checkout flow
 
-backend/.env
+---
+
+### 🎨 Modern UI/UX
+
+* Responsive design using Tailwind CSS
+* Clean and minimal interface
+* Search and filtering system
+* Profile dropdown & dashboard
+* Smooth user interactions
+
+---
+
+## 🛠 Tech Stack
+
+### Frontend
+
+* React (Vite)
+* Tailwind CSS
+* Axios
+* Socket.IO Client
+
+### Backend
+
+* Node.js
+* Express.js
+* MongoDB (Mongoose)
+* Socket.IO
+* JWT Authentication
+* Razorpay API
+
+---
+
+## 🧠 System Design Highlights
+
+* Scalable **chat architecture using conversation-based rooms**
+* Database design supports:
+
+  ```
+  1 listing → multiple buyers → separate conversations
+  ```
+* Real-time event handling using WebSockets
+* Optimized unread message tracking using Map structure
+* Secure middleware-based authentication
+
+---
+
+## ⚙️ Environment Variables
+
+Create a `.env` file inside `/backend`:
+
+```
 PORT=5000
 MONGO_URI=your_mongodb_uri
 JWT_SECRET=your_secret
-RAZORPAY_KEY_ID=
-RAZORPAY_KEY_SECRET=
+RAZORPAY_KEY_ID=your_key
+RAZORPAY_KEY_SECRET=your_secret
+```
 
-👨‍💻 Author
+---
 
-Siddharth Bhandari
+## 🚀 Getting Started
 
+### 1. Clone the repository
+
+```
+git clone https://github.com/your-username/college-marketplace.git
+cd college-marketplace
+```
+
+### 2. Install dependencies
+
+```
+cd backend && npm install
+cd ../frontend && npm install
+```
+
+### 3. Run the app
+
+```
+# backend
+npm run dev
+
+# frontend
+npm run dev
+```
+
+---
+
+## 📌 Future Improvements
+
+* Message read receipts (✔✔ seen)
+* Push notifications
+* Chat pagination (infinite scroll)
+* Advanced search filters
+* AI-based recommendations
+
+---
+
+## 👨‍💻 Author
+
+**Siddharth Bhandari**
 Aspiring Full Stack Developer
 
-⭐ If you like this project, give it a star!
+* GitHub: https://github.com/bhandarisiddharth256
+* LinkedIn: https://www.linkedin.com/in/siddharthbhandari0911/
+
+---
+
+## ⭐ Support
+
+If you found this project useful, consider giving it a ⭐ on GitHub!
