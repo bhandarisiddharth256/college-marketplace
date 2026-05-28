@@ -492,13 +492,13 @@ function Messages() {
         </div>
 
         {/* ================= RIGHT PANEL ================= */}
-        <div className="p-4 flex flex-col bg-white">
-        {!activeConversation ? (
-          <p className="text-gray-500">
-            Select a conversation to start chatting
-          </p>
-        ) : (
-          <>
+        <div className="p-4 flex min-h-0 flex-col bg-white">
+          {!activeConversation ? (
+            <p className="text-gray-500">
+              Select a conversation to start chatting
+            </p>
+          ) : (
+            <div className="flex min-h-0 flex-1 flex-col">
             {/* HEADER */}
             {(() => {
               const otherUserId = getOtherUserId(activeConversation);
@@ -552,7 +552,7 @@ function Messages() {
             {/* MESSAGES */}
             <div
               ref={messagesContainerRef}
-              className="flex-1 overflow-y-auto space-y-2 mb-3"
+              className="min-h-0 flex-1 overflow-y-auto space-y-2 mb-3"
             >
               {messages.map((msg) => {
                 const isMine = msg.sender === userId;
@@ -602,7 +602,7 @@ function Messages() {
               </div>
             )}
             {/* INPUT */}
-            <div className="flex gap-2 border-t pt-3">
+            <div className="mt-auto flex gap-2 border-t pt-3">
               {/* Hidden file input */}
               <input
                 type="file"
@@ -631,6 +631,12 @@ function Messages() {
               <input
                 value={text}
                 onChange={(e) => setText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
                 disabled={activeConversation?.listing?.status === "sold"}
                 className="flex-1 border p-2 rounded"
                 placeholder="Type message..."
@@ -648,7 +654,7 @@ function Messages() {
                 Send
               </button>
             </div>
-          </>
+          </div>
         )}
         </div>
       </div>
