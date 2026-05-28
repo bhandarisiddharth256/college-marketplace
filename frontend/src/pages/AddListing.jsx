@@ -198,21 +198,27 @@ function AddListing() {
   //   lastSuggestInput.condition === condition;
 
   return (
-    <div className="p-6 max-w-xl mx-auto">
-      <h2 className="text-2xl font-semibold mb-4">
-        {isEditMode ? "Edit Listing" : "Add Listing"}
-      </h2>
+    <div className="min-h-screen bg-slate-50 py-10">
+      <div className="card max-w-3xl mx-auto p-8">
+        <div className="mb-6">
+          <p className="text-sm uppercase tracking-[0.2em] text-brand-600 mb-2">
+            {isEditMode ? "Update listing" : "Create listing"}
+          </p>
+          <h2 className="text-3xl font-semibold">
+            {isEditMode ? "Edit Listing" : "Add Listing"}
+          </h2>
+        </div>
 
-      {error && <p className="text-red-600 mb-3">{error}</p>}
+        {error && <p className="text-red-600 mb-4">{error}</p>}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <input
-          type="text"
-          placeholder="Title"
-          className="w-full border p-2 rounded"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <input
+            type="text"
+            placeholder="Title"
+            className="w-full border border-slate-200 bg-slate-50 px-4 py-3 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-200"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
         <textarea
           placeholder="Description"
           className="w-full border p-2 rounded"
@@ -234,18 +240,18 @@ function AddListing() {
           onChange={(e) => setCategory(e.target.value)}
         />
         <select
-          className="w-full border p-2 rounded"
+          className="w-full border border-slate-200 bg-slate-50 px-4 py-3 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-200"
           value={condition}
           onChange={(e) => setCondition(e.target.value)}
         >
           <option value="new">New</option>
           <option value="like-new">Like New</option>
           <option value="used">Used</option>
-          <option value="used">old</option>
+          <option value="old">Old</option>
         </select>
 
         {/* IMAGES */}
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+        <div className="border-2 border-dashed border-slate-300 rounded-3xl p-6 text-center bg-slate-50">
           <input
             type="file"
             id="images"
@@ -346,7 +352,7 @@ function AddListing() {
 
         <button
           disabled={loading}
-          className="bg-blue-600 text-white px-4 py-2 rounded"
+          className="w-full bg-brand-600 text-white px-5 py-3 rounded-full disabled:opacity-50 transition hover:bg-brand-700"
         >
           {loading
             ? "Saving..."
@@ -355,6 +361,7 @@ function AddListing() {
               : "Create Listing"}
         </button>
       </form>
+    </div>
     </div>
   );
 }

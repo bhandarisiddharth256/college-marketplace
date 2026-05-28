@@ -57,17 +57,21 @@ function MyListings() {
   if (error) return <p className="p-6 text-red-600">{error}</p>;
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-semibold">My Listings</h2>
+    <div className="min-h-screen bg-slate-50 py-10">
+      <div className="card max-w-6xl mx-auto p-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
+          <div>
+            <h2 className="text-3xl font-semibold">My Listings</h2>
+            <p className="text-slate-500 mt-1">Manage your active listings, mark sold items, or edit details.</p>
+          </div>
 
-        <button
-          onClick={() => navigate("/add-listing")}
-          className="bg-blue-600 text-white px-4 py-2 rounded"
-        >
-          + Add Listing
-        </button>
-      </div>
+          <button
+            onClick={() => navigate("/add-listing")}
+            className="rounded-full bg-brand-600 text-white px-5 py-3 transition hover:bg-brand-700"
+          >
+            + Add Listing
+          </button>
+        </div>
 
       {listings.length === 0 && <p>You have not added any listings yet.</p>}
 
@@ -90,46 +94,42 @@ function MyListings() {
               {item.status === "sold" ? "Sold" : "Available"}
             </span>
 
-            <div className="flex gap-2 mt-4">
-              {/* EDIT */}
-                <button
+            <div className="flex flex-wrap gap-3 mt-4">
+              <button
                 disabled={item.status === 'sold'}
-                onClick={() =>
-                    navigate(`/edit-listing/${item._id}`)
-                }
-                className={`px-3 py-1 rounded ${
-                    item.status === 'sold'
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-yellow-500 text-white'
+                onClick={() => navigate(`/edit-listing/${item._id}`)}
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  item.status === 'sold'
+                    ? 'bg-slate-300 text-slate-600 cursor-not-allowed'
+                    : 'bg-amber-500 text-white hover:bg-amber-600'
                 }`}
-                >
+              >
                 {item.status === 'sold' ? 'Edit Disabled' : 'Edit'}
-                </button>
+              </button>
 
-              {/* DELETE */}
               <button
                 onClick={() => handleDelete(item._id)}
-                className="bg-red-600 text-white px-3 py-1 rounded"
+                className="rounded-full bg-red-600 text-white px-4 py-2 text-sm font-semibold transition hover:bg-red-700"
               >
                 Delete
               </button>
 
-              {/* MARK SOLD */}
               <button
-                disabled={item.status === "sold"}
+                disabled={item.status === 'sold'}
                 onClick={() => handleMarkSold(item._id)}
-                className={`px-3 py-1 rounded ${
-                  item.status === "sold"
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-green-600 text-white"
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  item.status === 'sold'
+                    ? 'bg-slate-300 text-slate-600 cursor-not-allowed'
+                    : 'bg-emerald-600 text-white hover:bg-emerald-700'
                 }`}
               >
-                {item.status === "sold" ? "Sold" : "Mark Sold"}
+                {item.status === 'sold' ? 'Sold' : 'Mark Sold'}
               </button>
             </div>
           </div>
         ))}
       </div>
+    </div>
     </div>
   );
 }

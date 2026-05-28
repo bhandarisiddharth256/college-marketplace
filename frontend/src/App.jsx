@@ -28,128 +28,134 @@ import { useLocation } from "react-router-dom";
 function App() {
   return (
     <AuthProvider>
+      <div className="min-h-screen bg-slate-50">
         <Header />
-        <Routes>
-          {/* 🌐 Public */}
-          <Route path="/" element={<Home />} />
-          <Route path="/marketplace" element={<Marketplace />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
 
-          {/* 🔐 Protected */}
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            }
-          />
+        <main className="app-container py-10">
+          <Routes>
+            {/* 🌐 Public */}
+            <Route path="/" element={<Home />} />
+            <Route path="/marketplace" element={<Marketplace />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
 
-          <Route
-            path="/my-listings"
-            element={
-              <ProtectedRoute>
-                <MyListings />
-              </ProtectedRoute>
-            }
-          />
+            {/* 🔐 Protected */}
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/messages"
-            element={
-              <ProtectedRoute>
-                <Messages />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/add-listing"
-            element={
-              <ProtectedRoute>
-                <AddListing />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/listings/:id" element={<ListingDetails />} />
-          <Route
-            path="/wishlist"
-            element={
-              <ProtectedRoute>
-                <Wishlist />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/my-listings"
+              element={
+                <ProtectedRoute>
+                  <MyListings />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/cart"
-            element={
-              <ProtectedRoute>
-                <Cart />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/messages"
+              element={
+                <ProtectedRoute>
+                  <Messages />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/add-listing"
+              element={
+                <ProtectedRoute>
+                  <AddListing />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/listings/:id" element={<ListingDetails />} />
+            <Route
+              path="/wishlist"
+              element={
+                <ProtectedRoute>
+                  <Wishlist />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/edit-listing/:id"
-            element={
-              <ProtectedRoute>
-                <AddListing />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/cart"
+              element={
+                <ProtectedRoute>
+                  <Cart />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/payment/success"
-            element={
-              <ProtectedRoute>
-                <PaymentSuccess />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/edit-listing/:id"
+              element={
+                <ProtectedRoute>
+                  <AddListing />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/purchases"
-            element={
-              <ProtectedRoute>
-                <MyPurchases />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/payment/success"
+              element={
+                <ProtectedRoute>
+                  <PaymentSuccess />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/purchases/:purchaseId"
-            element={
-              <ProtectedRoute>
-                <PurchaseDetails />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/purchases"
+              element={
+                <ProtectedRoute>
+                  <MyPurchases />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/sales"
-            element={
-              <ProtectedRoute>
-                <MySales />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute adminOnly>
-                <AdminLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<Dashboard />} />
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="users" element={<Users />} />
-            <Route path="listings" element={<Listings />} />
-            <Route path="reports" element={<Reports />} />
-          </Route>
-        </Routes>
-        {/* <Footer /> */}
+            <Route
+              path="/purchases/:purchaseId"
+              element={
+                <ProtectedRoute>
+                  <PurchaseDetails />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/sales"
+              element={
+                <ProtectedRoute>
+                  <MySales />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute adminOnly>
+                  <AdminLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Dashboard />} />
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="users" element={<Users />} />
+              <Route path="listings" element={<Listings />} />
+              <Route path="reports" element={<Reports />} />
+            </Route>
+          </Routes>
+        </main>
+
+        <Footer />
+      </div>
     </AuthProvider>
   );
 }

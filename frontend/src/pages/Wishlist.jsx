@@ -69,10 +69,14 @@ function Wishlist() {
   if (error) return <p className="p-6 text-red-600">{error}</p>;
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-semibold mb-4">Wishlist</h2>
+    <div className="min-h-screen bg-slate-50 py-10">
+      <div className="card max-w-6xl mx-auto p-6">
+        <div className="mb-6">
+          <h2 className="text-3xl font-semibold">Wishlist</h2>
+          <p className="text-slate-500 mt-1">Save favorite listings and move them into your cart quickly.</p>
+        </div>
 
-      {items.length === 0 && <p>No items in wishlist.</p>}
+        {items.length === 0 && <p>No items in wishlist.</p>}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {items.map((item) => {
@@ -98,32 +102,28 @@ function Wishlist() {
                 {item.listing.status}
               </span>
 
-              <div className="flex gap-2 mt-4">
-                {/* MOVE TO CART */}
+              <div className="flex flex-wrap gap-3 mt-4">
                 <button
                   disabled={alreadyInCart}
                   onClick={(e) => {
-                    // e.stopPropagation(); // 🔥 IMPORTANT
                     if (!alreadyInCart) {
-                      handleMoveToCart(item._id); // wishlist item id
+                      handleMoveToCart(item._id);
                     }
                   }}
-                  className={`px-3 py-1 rounded ${
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                     alreadyInCart
-                      ? "bg-gray-400 cursor-not-allowed"
-                      : "bg-green-600 text-white"
+                      ? "bg-slate-300 text-slate-600 cursor-not-allowed"
+                      : "bg-brand-600 text-white hover:bg-brand-700"
                   }`}
                 >
                   {alreadyInCart ? "Already in Cart" : "Move to Cart"}
                 </button>
 
-                {/* REMOVE */}
                 <button
                   onClick={(e) => {
-                    // e.stopPropagation(); // 🔥 IMPORTANT
-                    handleRemove(item._id); // wishlist item id
+                    handleRemove(item._id);
                   }}
-                  className="bg-red-600 text-white px-3 py-1 rounded"
+                  className="rounded-full bg-red-600 text-white px-4 py-2 text-sm font-semibold transition hover:bg-red-700"
                 >
                   Remove
                 </button>
@@ -133,6 +133,8 @@ function Wishlist() {
         })}
       </div>
     </div>
+    </div>
+
   );
 }
 

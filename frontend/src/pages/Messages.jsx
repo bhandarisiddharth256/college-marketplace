@@ -29,6 +29,7 @@ function Messages() {
   const [showDeleteConversationModal, setShowDeleteConversationModal] = useState(false);
   const [reportReason, setReportReason] = useState("");
   const [sendingMessageId, setSendingMessageId] = useState(null);
+  const messagesContainerRef = useRef(null);
   const messagesEndRef = useRef(null);
 
   /* ---------------- SOCKET CONNECT & ERROR HANDLING -------- */
@@ -281,6 +282,7 @@ function Messages() {
 
     try {
       await deleteConversation(activeConversation._id);
+      socket.emit("leaveConversation", activeConversation._id);
       setConversations((prev) =>
         prev.filter((conv) => conv._id !== activeConversation._id)
       );
@@ -352,12 +354,10 @@ function Messages() {
   }, [activeConversation]);
 
   useEffect(() => {
-    scrollToBottom();
+    if (messages.length > 0) {
+      scrollToBottom();
+    }
   }, [messages]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [activeConversation]);
 
   const handleMessageClick = (msg) => {
     setSelectedMsg(msg);
@@ -365,7 +365,12 @@ function Messages() {
   };
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      return;
+    }
+
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   };
 
   const getOtherUserId = (conv) =>
@@ -389,9 +394,10 @@ function Messages() {
 
   /* ================= RENDER ================= */
   return (
-    <div className="flex h-[80vh] border">
-      {/* ================= LEFT PANEL ================= */}
-      <div className="w-1/3 border-r p-4 overflow-y-auto">
+    <div className="min-h-screen bg-slate-50 py-10">
+      <div className="card max-w-7xl mx-auto grid gap-6 lg:grid-cols-[1.1fr_1.9fr] h-[80vh] overflow-hidden">
+        {/* ================= LEFT PANEL ================= */}
+        <div className="border-r border-slate-200 p-4 overflow-y-auto bg-white">
         <h2 className="font-semibold mb-4">Chats</h2>
 
         {!userId ? (
@@ -409,7 +415,10 @@ function Messages() {
               <div
                 key={conv._id}
                 onClick={async () => {
+                  const currentScrollY = window.scrollY;
                   setActiveConversation(conv);
+                  setMessages([]);
+
                   // Optimistically reset unread count UI
                   setConversations((prev) =>
                     prev.map((c) =>
@@ -424,7 +433,11 @@ function Messages() {
                         : c,
                     ),
                   );
-                  // getMessages will also reset backend and emit socket event to other participants
+
+                  window.requestAnimationFrame(() => {
+                    window.scrollTo(0, currentScrollY);
+                  });
+
                 }}
                 className={`p-3 rounded cursor-pointer mb-2 border ${
                   isActive
@@ -476,10 +489,10 @@ function Messages() {
             );
           })
         )}
-      </div>
+        </div>
 
-      {/* ================= RIGHT PANEL ================= */}
-      <div className="w-2/3 p-4 flex flex-col">
+        {/* ================= RIGHT PANEL ================= */}
+        <div className="p-4 flex flex-col bg-white">
         {!activeConversation ? (
           <p className="text-gray-500">
             Select a conversation to start chatting
@@ -537,7 +550,10 @@ function Messages() {
             })()}
 
             {/* MESSAGES */}
-            <div className="flex-1 overflow-y-auto space-y-2 mb-3">
+            <div
+              ref={messagesContainerRef}
+              className="flex-1 overflow-y-auto space-y-2 mb-3"
+            >
               {messages.map((msg) => {
                 const isMine = msg.sender === userId;
 
@@ -634,6 +650,7 @@ function Messages() {
             </div>
           </>
         )}
+        </div>
       </div>
 
       {previewImage && (

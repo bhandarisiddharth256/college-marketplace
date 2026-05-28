@@ -151,8 +151,12 @@ function Cart() {
   if (error) return <p className="p-6 text-red-600">{error}</p>;
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-semibold mb-4">Cart</h2>
+    <div className="min-h-screen bg-slate-50 py-10">
+      <div className="card max-w-6xl mx-auto p-6">
+        <div className="mb-6">
+          <h2 className="text-3xl font-semibold">Cart</h2>
+          <p className="text-slate-500 mt-1">Review your selected items and complete checkout securely.</p>
+        </div>
 
       {items.length === 0 && <p>Your cart is empty.</p>}
 
@@ -173,10 +177,10 @@ function Cart() {
               ₹{item.listing.price}
             </p>
 
-            <div className="flex gap-2 mt-4">
+            <div className="flex flex-wrap gap-3 mt-4">
               <button
                 onClick={(e) => handleRemove(item._id, e)}
-                className="bg-red-600 text-white px-3 py-1 rounded"
+                className="rounded-full bg-red-600 text-white px-4 py-2 text-sm font-semibold transition hover:bg-red-700"
               >
                 Remove
               </button>
@@ -184,10 +188,10 @@ function Cart() {
               <button
                 onClick={(e) => handleBuy(item.listing._id, e)}
                 disabled={payingId === item.listing._id}
-                className={`px-3 py-1 rounded text-white ${
+                className={`rounded-full px-4 py-2 text-sm font-semibold text-white transition ${
                   payingId === item.listing._id
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-black"
+                    ? "bg-slate-300 cursor-not-allowed text-slate-600"
+                    : "bg-brand-600 hover:bg-brand-700"
                 }`}
               >
                 {payingId === item.listing._id ? "Processing..." : "Buy"}
@@ -196,6 +200,7 @@ function Cart() {
           </div>
         ))}
       </div>
+    </div>
     </div>
   );
 }

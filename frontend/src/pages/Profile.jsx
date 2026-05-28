@@ -47,19 +47,14 @@ function Profile() {
         });
 
         // counts (parallel)
-        const [
-          cartRes,
-          wishlistRes,
-          purchaseRes,
-          salesRes,
-          listingRes,
-        ] = await Promise.all([
-          getCart(),
-          getWishlist(),
-          getMyPurchases(),
-          getMySales(),
-          getMyListings(),
-        ]);
+        const [cartRes, wishlistRes, purchaseRes, salesRes, listingRes] =
+          await Promise.all([
+            getCart(),
+            getWishlist(),
+            getMyPurchases(),
+            getMySales(),
+            getMyListings(),
+          ]);
 
         setCounts({
           cart: cartRes.data?.length || 0,
@@ -114,101 +109,111 @@ function Profile() {
   // RENDER
   // ---------------------------
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <h2 className="text-2xl font-semibold mb-6">My Profile</h2>
+    <div className="min-h-screen bg-slate-50 py-10">
+      <div className="card max-w-4xl mx-auto p-6">
+        <div className="mb-6">
+          <h2 className="text-3xl font-semibold">My Profile</h2>
+          <p className="text-sm text-slate-500 mt-1">
+            Manage your account and view activity summary.
+          </p>
+        </div>
 
-      {/* 👤 USER INFO */}
-      <div className="border rounded p-4 mb-6">
-        {isEditing ? (
-          <>
-            <input
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              className="border p-2 w-full mb-2"
-              placeholder="Name"
-            />
+        {/* 👤 USER INFO */}
+        <div className="border border-slate-200 rounded-3xl p-6 mb-8 bg-white shadow-sm">
+          {isEditing ? (
+            <>
+              <input
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                className="border p-2 w-full mb-2"
+                placeholder="Name"
+              />
 
-            <input
-              name="college"
-              value={formData.college}
-              onChange={handleChange}
-              className="border p-2 w-full mb-2"
-              placeholder="College"
-            />
+              <input
+                name="college"
+                value={formData.college}
+                onChange={handleChange}
+                className="border p-2 w-full mb-2"
+                placeholder="College"
+              />
 
+              <button
+                onClick={handleSave}
+                className="bg-brand-600 text-white px-5 py-2 rounded-full mr-2 transition hover:bg-brand-700"
+              >
+                Save
+              </button>
+
+              <button
+                onClick={() => setIsEditing(false)}
+                className="border border-slate-300 text-slate-700 px-5 py-2 rounded-full transition hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <>
+              <p>
+                <strong>Name:</strong> {user.name}
+              </p>
+              <p>
+                <strong>Email:</strong> {user.email}
+              </p>
+              <p>
+                <strong>College:</strong> {user.college}
+              </p>
+
+              <button
+                onClick={() => setIsEditing(true)}
+                className="mt-3 border px-3 py-1 rounded"
+              >
+                Edit Profile
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* ⚡ ACTIVITY */}
+        <div>
+          <h3 className="text-lg font-semibold mb-3">My Activity</h3>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
             <button
-              onClick={handleSave}
-              className="bg-black text-white px-4 py-2 rounded mr-2"
+              onClick={() => navigate("/cart")}
+              className="border border-slate-200 rounded-3xl p-4 bg-slate-50 hover:bg-slate-100 transition"
             >
-              Save
+              🛒 Cart ({counts.cart})
             </button>
 
             <button
-              onClick={() => setIsEditing(false)}
-              className="border px-4 py-2 rounded"
+              onClick={() => navigate("/wishlist")}
+              className="border border-slate-200 rounded-3xl p-4 bg-slate-50 hover:bg-slate-100 transition"
             >
-              Cancel
+              ❤️ Wishlist ({counts.wishlist})
             </button>
-          </>
-        ) : (
-          <>
-            <p>
-              <strong>Name:</strong> {user.name}
-            </p>
-            <p>
-              <strong>Email:</strong> {user.email}
-            </p>
-            <p>
-              <strong>College:</strong> {user.college}
-            </p>
 
             <button
-              onClick={() => setIsEditing(true)}
-              className="mt-3 border px-3 py-1 rounded"
+              onClick={() => navigate("/purchases")}
+              className="border p-3 rounded"
             >
-              Edit Profile
+              📦 My Purchases ({counts.purchases})
             </button>
-          </>
-        )}
-      </div>
 
-      {/* ⚡ ACTIVITY */}
-      <div>
-        <h3 className="text-lg font-semibold mb-3">My Activity</h3>
+            <button
+              onClick={() => navigate("/sales")}
+              className="border p-3 rounded"
+            >
+              💰 My Sales ({counts.sales})
+            </button>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          <button onClick={() => navigate("/cart")} className="border p-3 rounded">
-            🛒 Cart ({counts.cart})
-          </button>
-
-          <button
-            onClick={() => navigate("/wishlist")}
-            className="border p-3 rounded"
-          >
-            ❤️ Wishlist ({counts.wishlist})
-          </button>
-
-          <button
-            onClick={() => navigate("/purchases")}
-            className="border p-3 rounded"
-          >
-            📦 My Purchases ({counts.purchases})
-          </button>
-
-          <button
-            onClick={() => navigate("/sales")}
-            className="border p-3 rounded"
-          >
-            💰 My Sales ({counts.sales})
-          </button>
-
-          <button
-            onClick={() => navigate("/my-listings")}
-            className="border p-3 rounded"
-          >
-            📢 My Listings ({counts.listings})
-          </button>
+            <button
+              onClick={() => navigate("/my-listings")}
+              className="border p-3 rounded"
+            >
+              📢 My Listings ({counts.listings})
+            </button>
+          </div>
         </div>
       </div>
     </div>

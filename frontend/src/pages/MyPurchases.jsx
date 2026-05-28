@@ -28,8 +28,12 @@ function MyPurchases() {
   if (error) return <p className="p-6 text-red-600">{error}</p>;
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-semibold mb-4">My Purchases</h2>
+    <div className="min-h-screen bg-slate-50 py-10">
+      <div className="card max-w-6xl mx-auto p-6">
+        <div className="mb-6">
+          <h2 className="text-3xl font-semibold">My Purchases</h2>
+          <p className="text-slate-500 mt-1">Review everything you have purchased in one place.</p>
+        </div>
 
       {purchases.length === 0 && <p>You haven’t purchased anything yet.</p>}
 
@@ -63,6 +67,7 @@ function MyPurchases() {
           </div>
         ))}
       </div>
+    </div>
     </div>
   );
 }

@@ -117,11 +117,17 @@ function ListingDetails() {
   const isSold = listing.status === "sold";
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <h2 className="text-2xl font-semibold mb-4">{listing.title}</h2>
+    <div className="min-h-screen bg-slate-50 py-10">
+      <div className="card max-w-5xl mx-auto p-8">
+        <div className="mb-6">
+          <h2 className="text-3xl font-semibold">{listing.title}</h2>
+          <p className="text-sm text-slate-500 mt-2">
+            {listing.description?.slice(0, 120)}
+          </p>
+        </div>
 
-      {listing.images?.length > 0 && (
-        <div className="relative mb-6">
+        {listing.images?.length > 0 && (
+          <div className="relative mb-6 rounded-3xl overflow-hidden shadow-soft bg-slate-100">
           {/* IMAGE */}
           <img
             src={listing.images[currentImage]}
@@ -172,12 +178,12 @@ function ListingDetails() {
 
       <p className="text-gray-600 mb-4">{listing.description}</p>
 
-      <div className="flex justify-between items-center mb-4">
-        <span className="text-2xl font-bold text-blue-600">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-6">
+        <span className="text-3xl font-bold text-brand-600">
           ₹{listing.price}
         </span>
 
-        <span className="px-3 py-1 bg-gray-200 rounded text-sm">
+        <span className="inline-flex items-center rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-700">
           {listing.condition}
         </span>
       </div>
@@ -190,16 +196,16 @@ function ListingDetails() {
 
       {/* ---------------- ACTIONS ---------------- */}
       {!isSold && (
-        <div className="mt-6 flex flex-wrap gap-3">
+        <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_1fr] xl:grid-cols-[1.2fr_1fr] items-start">
           {!isOwner ? (
-            <>
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               <button
                 disabled={isInWishlist}
                 onClick={handleAddToWishlist}
-                className={`px-4 py-2 rounded ${
+                className={`rounded-full px-5 py-3 transition ${
                   isInWishlist
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-pink-600 text-white"
+                    ? "bg-slate-300 text-slate-600 cursor-not-allowed"
+                    : "bg-pink-600 text-white hover:bg-pink-700"
                 }`}
               >
                 {isInWishlist ? "In Wishlist" : "Add to Wishlist"}
@@ -208,27 +214,30 @@ function ListingDetails() {
               <button
                 disabled={isInCart}
                 onClick={handleAddToCart}
-                className={`px-4 py-2 rounded ${
+                className={`rounded-full px-5 py-3 transition ${
                   isInCart
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-blue-600 text-white"
+                    ? "bg-slate-300 text-slate-600 cursor-not-allowed"
+                    : "bg-brand-600 text-white hover:bg-brand-700"
                 }`}
               >
                 {isInCart ? "In Cart" : "Add to Cart"}
               </button>
-
-              <button
-                onClick={handleChat}
-                className="bg-green-600 text-white px-4 py-2 rounded"
-              >
-                Chat with Seller
-              </button>
-            </>
+            </div>
           ) : (
-            <p className="text-gray-600 italic">This is your listing</p>
+            <p className="text-slate-600 italic">This is your listing</p>
+          )}
+
+          {!isOwner && (
+            <button
+              onClick={handleChat}
+              className="rounded-full bg-emerald-600 text-white px-5 py-3 transition hover:bg-emerald-700"
+            >
+              Chat with Seller
+            </button>
           )}
         </div>
       )}
+    </div>
     </div>
   );
 }

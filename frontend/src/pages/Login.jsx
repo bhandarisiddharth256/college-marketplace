@@ -58,12 +58,20 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-6 rounded shadow w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 py-10">
+      <div className="card w-full max-w-md p-8">
+        <div className="mb-6 text-center">
+          <p className="text-sm uppercase tracking-[0.2em] text-brand-600 mb-2">
+            Welcome back
+          </p>
+          <h2 className="text-3xl font-semibold">Login to College Marketplace</h2>
+        </div>
 
-        <h2 className="text-2xl font-semibold mb-4 text-center">
-          Login
-        </h2>
+        {error && (
+          <p className="mb-3 text-red-600 text-sm text-center">
+            {error}
+          </p>
+        )}
 
         {error && (
           <p className="mb-3 text-red-600 text-sm text-center">
@@ -76,7 +84,7 @@ function Login() {
           <input
             type="email"
             placeholder="College Email"
-            className="w-full border px-3 py-2 rounded"
+            className="w-full border border-slate-200 bg-slate-50 px-4 py-3 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-200"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -85,7 +93,7 @@ function Login() {
           <input
             type="password"
             placeholder="Password"
-            className="w-full border px-3 py-2 rounded"
+            className="w-full border border-slate-200 bg-slate-50 px-4 py-3 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-200"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -94,7 +102,7 @@ function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded disabled:opacity-50"
+            className="w-full bg-brand-600 text-white py-3 rounded-full disabled:opacity-50 transition hover:bg-brand-700"
           >
             {loading ? "Logging in..." : "Login"}
           </button>

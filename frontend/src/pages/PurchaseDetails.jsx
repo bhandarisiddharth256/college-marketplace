@@ -8,8 +8,9 @@ function PurchaseDetails() {
 
   if (!purchase) {
     return (
-      <div className="p-6">
-        <p className="text-red-600">
+      <div className="min-h-screen bg-slate-50 py-10">
+        <div className="card max-w-3xl mx-auto p-6">
+          <p className="text-red-600">
           Purchase data not available. Please go back.
         </p>
         <button
@@ -19,16 +20,18 @@ function PurchaseDetails() {
           Go to My Purchases
         </button>
       </div>
+      </div>
     );
   }
 
   const { listing } = purchase;
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-semibold mb-4">Purchase Details</h2>
+    <div className="min-h-screen bg-slate-50 py-10">
+      <div className="card max-w-3xl mx-auto p-6">
+        <h2 className="text-3xl font-semibold mb-4">Purchase Details</h2>
 
-      <div className="border p-4 rounded">
+        <div className="border border-slate-200 rounded-3xl p-6 bg-white shadow-sm">
         <h3 className="text-xl font-semibold mb-2">{listing.title}</h3>
 
         <p className="text-sm text-gray-600">Category: {listing.category}</p>
@@ -51,7 +54,7 @@ function PurchaseDetails() {
           Purchased
         </span>
       </div>
-
+      </div>
       <button
         onClick={() => navigate("/marketplace")}
         className="mt-6 px-4 py-2 bg-black text-white rounded"

@@ -62,9 +62,8 @@ io.on("connection", (socket) => {
 
         if (
           conversation &&
-          conversation.participants.some(
-            (p) => p.toString() === userId
-          )
+          conversation.participants.some((p) => p.toString() === userId) &&
+          !conversation.deletedFor?.includes(userId)
         ) {
           socket.join(conversationId);
         }
@@ -190,6 +189,10 @@ io.on("connection", (socket) => {
           });
 
           conversation.lastMessage = text || "📷 Image";
+          if (conversation.deletedFor?.length) {
+            conversation.deletedFor = [];
+          }
+
           conversation.participants.forEach((participantId) => {
             const pid = participantId.toString();
             if (pid !== userId) {
@@ -199,6 +202,9 @@ io.on("connection", (socket) => {
           });
 
           conversation.markModified("unreadCount");
+          if (conversation.deletedFor) {
+            conversation.markModified("deletedFor");
+          }
           await conversation.save();
 
           const messageData = {
@@ -222,6 +228,8 @@ io.on("connection", (socket) => {
 
           conversation.participants.forEach((participantId) => {
             const pid = participantId.toString();
+            if (conversation.deletedFor?.includes(pid)) return;
+
             io.to(`user:${pid}`).emit("newMessage", messageData);
             io.to(`user:${pid}`).emit("conversationUpdated", {
               conversation: updatedConversation,

@@ -2,52 +2,69 @@ import { Link } from "react-router-dom";
 
 function Footer() {
   return (
-    <footer className="border-t bg-white mt-10">
-      <div className="max-w-7xl mx-auto px-6 py-10 grid grid-cols-1 md:grid-cols-4 gap-8 text-sm text-gray-600">
-
-        {/* BRAND */}
+    <footer className="border-t border-slate-200 bg-slate-950 text-slate-300 mt-16">
+      <div className="app-container grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <h3 className="text-lg font-semibold text-indigo-600">
-            CollegeMarketplace
-          </h3>
-          <p className="mt-2">
-            Buy & sell items inside your college community securely.
+          <h3 className="text-xl font-semibold text-white">CollegeMarketplace</h3>
+          <p className="mt-3 text-sm text-slate-400 leading-6">
+            A premium campus marketplace for students to buy, sell, and connect in a trusted environment.
           </p>
         </div>
 
-        {/* LINKS */}
         <div>
-          <h4 className="font-semibold text-gray-800 mb-3">Explore</h4>
-          <ul className="space-y-2">
-            <li><Link to="/">Home</Link></li>
-            <li><Link to="/marketplace">Marketplace</Link></li>
-            <li><Link to="/messages">Messages</Link></li>
+          <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400 mb-4">Explore</h4>
+          <ul className="space-y-3 text-sm">
+            <li>
+              <Link to="/" className="transition hover:text-white">
+                Home
+              </Link>
+            </li>
+            <li>
+              <Link to="/marketplace" className="transition hover:text-white">
+                Marketplace
+              </Link>
+            </li>
+            <li>
+              <Link to="/messages" className="transition hover:text-white">
+                Messages
+              </Link>
+            </li>
           </ul>
         </div>
 
-        {/* ACCOUNT */}
         <div>
-          <h4 className="font-semibold text-gray-800 mb-3">Account</h4>
-          <ul className="space-y-2">
-            <li><Link to="/profile">Profile</Link></li>
-            <li><Link to="/my-listings">My Listings</Link></li>
-            <li><Link to="/sales">My Sales</Link></li>
+          <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400 mb-4">Account</h4>
+          <ul className="space-y-3 text-sm">
+            <li>
+              <Link to="/profile" className="transition hover:text-white">
+                Profile
+              </Link>
+            </li>
+            <li>
+              <Link to="/my-listings" className="transition hover:text-white">
+                My Listings
+              </Link>
+            </li>
+            <li>
+              <Link to="/sales" className="transition hover:text-white">
+                My Sales
+              </Link>
+            </li>
           </ul>
         </div>
 
-        {/* INFO */}
         <div>
-          <h4 className="font-semibold text-gray-800 mb-3">Info</h4>
-          <p>Secure payments</p>
-          <p>Verified users</p>
-          <p>24/7 support</p>
+          <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400 mb-4">Why choose us</h4>
+          <ul className="space-y-3 text-sm text-slate-400">
+            <li>Secure campus payments</li>
+            <li>Verified student community</li>
+            <li>Fast, reliable messaging</li>
+          </ul>
         </div>
-
       </div>
 
-      {/* BOTTOM BAR */}
-      <div className="border-t text-center py-4 text-xs text-gray-500">
-        © {new Date().getFullYear()} CollegeMarketplace. All rights reserved.
+      <div className="border-t border-slate-800 text-center py-5 text-xs text-slate-500">
+        © {new Date().getFullYear()} CollegeMarketplace. Crafted for campus commerce.
       </div>
     </footer>
   );
