@@ -45,6 +45,7 @@ export const startConversation = asyncHandler(async (req, res) => {
 export const getMyConversations = asyncHandler(async (req, res) => {
   const conversations = await Conversation.find({
     participants: req.user._id,
+    deletedFor: { $ne: req.user._id },
   })
     .populate("listing", "title price status owner")
     .sort({ updatedAt: -1 });
@@ -72,9 +73,24 @@ export const getMessages = asyncHandler(async (req, res) => {
     throw new ApiError(403, "Not allowed to access this chat");
   }
 
-  // 🔔 Reset unread count
+  // 🔔 Reset unread count for this user
+  const hadUnread = (conversation.unreadCount.get(req.user._id.toString()) || 0) > 0;
   conversation.unreadCount.set(req.user._id.toString(), 0);
+  conversation.markModified("unreadCount");
   await conversation.save();
+
+  // 🔥 Emit socket event so other participants see this user has read messages
+  if (io && hadUnread) {
+    const updatedConversation = await Conversation.findById(
+      conversationId
+    ).populate("listing", "title price status owner");
+
+    conversation.participants.forEach((participantId) => {
+      io.to(`user:${participantId.toString()}`).emit("conversationUpdated", {
+        conversation: updatedConversation,
+      });
+    });
+  }
 
   const messages = await Message.find({
     conversation: conversationId,
@@ -120,6 +136,7 @@ export const sendMessage = asyncHandler(async (req, res) => {
       seller: listing.owner,
       participants: [req.user._id, listing.owner],
       unreadCount: {
+        [req.user._id.toString()]: 0,
         [listing.owner.toString()]: 1,
       },
     });
@@ -175,16 +192,22 @@ export const sendMessage = asyncHandler(async (req, res) => {
       isDeleted: false,
     };
 
-    // ✅ Emit to all participants in the conversation room
-    io.to(conversation._id.toString()).emit("newMessage", messageData);
-
-    // ✅ Also emit conversation update for sidebar
     const updatedConversation = await Conversation.findById(
       conversation._id
     ).populate("listing", "title price status owner");
 
+    // ✅ Emit to all participants in the conversation room
+    io.to(conversation._id.toString()).emit("newMessage", messageData);
     io.to(conversation._id.toString()).emit("conversationUpdated", {
       conversation: updatedConversation,
+    });
+
+    // ✅ Also notify each participant directly in case they are not joined to the room yet
+    conversation.participants.forEach((participantId) => {
+      io.to(`user:${participantId.toString()}`).emit("newMessage", messageData);
+      io.to(`user:${participantId.toString()}`).emit("conversationUpdated", {
+        conversation: updatedConversation,
+      });
     });
   }
 
@@ -215,11 +238,50 @@ export const deleteMessage = asyncHandler(async (req, res) => {
     io.to(message.conversation.toString()).emit("messageDeleted", {
       messageId: message._id,
     });
+
+    const conversation = await Conversation.findById(message.conversation);
+    conversation?.participants.forEach((participantId) => {
+      io.to(`user:${participantId.toString()}`).emit("messageDeleted", {
+        messageId: message._id,
+      });
+    });
   }
 
   return res
     .status(200)
     .json(new ApiResponse(200, null, "Message deleted"));
+});
+
+/* 🧹 Delete conversation (soft delete for current user only) */
+export const deleteConversation = asyncHandler(async (req, res) => {
+  const { conversationId } = req.params;
+
+  const conversation = await Conversation.findById(conversationId);
+  if (!conversation) throw new ApiError(404, "Conversation not found");
+
+  const isParticipant = conversation.participants.some(
+    (id) => id.toString() === req.user._id.toString()
+  );
+  if (!isParticipant) {
+    throw new ApiError(403, "Not allowed to delete this conversation");
+  }
+
+  // 🗑️ Soft delete - add user to deletedFor array
+  if (!conversation.deletedFor.includes(req.user._id)) {
+    conversation.deletedFor.push(req.user._id);
+    await conversation.save();
+  }
+
+  // 🔔 Notify only the user who deleted it
+  if (io) {
+    io.to(`user:${req.user._id.toString()}`).emit("conversationDeleted", {
+      conversationId: conversation._id.toString(),
+    });
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, null, "Conversation deleted from your chat list"));
 });
 
 /* 🚩 Report message */

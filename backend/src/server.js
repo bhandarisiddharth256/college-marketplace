@@ -51,6 +51,7 @@ io.on("connection", (socket) => {
 
     /* -------- USER ONLINE -------- */
     onlineUsers.set(userId, socket.id);
+    socket.join(`user:${userId}`);
     console.log(`🟢 ${socket.user.name} is online`);
     io.emit("userOnline", userId);
 
@@ -93,91 +94,156 @@ io.on("connection", (socket) => {
     });
 
     /* -------- SEND MESSAGE -------- */
-    socket.on("sendMessage", async ({ conversationId, text, image }) => {
-      try {
-        // Check for empty message
-        if ((!text || !text.trim()) && !image) {
-          socket.emit("errorMessage", "Message cannot be empty");
-          return;
-        }
-
-        const conversation = await Conversation.findById(conversationId);
-        if (!conversation) {
-          socket.emit("errorMessage", "Conversation not found");
-          return;
-        }
-
-        // Authorization check
-        const isParticipant = conversation.participants.some(
-          (p) => p.toString() === userId
-        );
-        if (!isParticipant) {
-          socket.emit("errorMessage", "Not authorized");
-          return;
-        }
-
-        // Check if item is sold
-        const listing = await Listing.findById(conversation.listing);
-        if (!listing || listing?.status === "sold") {
-          socket.emit("errorMessage", "Item is no longer available");
-          return;
-        }
-
-        // Ensure sender is in room
-        socket.join(conversationId);
-
-        // Save message
-        const message = await Message.create({
-          conversation: conversationId,
-          sender: socket.user._id,
-          text,
-          image,
-        });
-
-        // Update last message
-        conversation.lastMessage = text || "📷 Image";
-
-        // Update unread count
-        conversation.participants.forEach((participantId) => {
-          const pid = participantId.toString();
-          if (pid !== userId) {
-            const currentUnread =
-              conversation.unreadCount?.get(pid) || 0;
-            conversation.unreadCount.set(pid, currentUnread + 1);
+    socket.on(
+      "sendMessage",
+      async ({ conversationId, text, image, listingId }, callback) => {
+        try {
+          // Check for empty message
+          if ((!text || !text.trim()) && !image) {
+            const error = "Message cannot be empty";
+            if (callback) return callback({ error });
+            socket.emit("errorMessage", error);
+            return;
           }
-        });
 
-        conversation.markModified("unreadCount");
-        await conversation.save();
+          let conversation = null;
+          if (
+            conversationId &&
+            conversationId !== "null" &&
+            conversationId !== "new"
+          ) {
+            conversation = await Conversation.findById(conversationId);
+          }
 
-        // Emit to all participants in the room
-        const messageData = {
-          _id: message._id,
-          conversation: conversationId,
-          sender: socket.user._id.toString(),
-          text,
-          image,
-          createdAt: message.createdAt,
-          isDeleted: false,
-        };
+          if (!conversation) {
+            if (!listingId) {
+              const error = "Listing ID is required to start a chat";
+              if (callback) return callback({ error });
+              socket.emit("errorMessage", error);
+              return;
+            }
 
-        io.to(conversationId).emit("newMessage", messageData);
-        
-        // Emit conversation update for sidebar
-        const updatedConversation = await Conversation.findById(
-          conversationId
-        ).populate("listing", "title price status owner");
-        
-        io.to(conversationId).emit("conversationUpdated", {
-          conversation: updatedConversation,
-        });
-        
-        socket.emit("messageSent", { messageId: message._id });
-      } catch (err) {
-        console.error("Send message error:", err);
-        socket.emit("errorMessage", "Failed to send message");
+            const listing = await Listing.findOne({
+              _id: listingId,
+              isDeleted: false,
+            });
+
+            if (!listing) {
+              const error = "Listing not found";
+              if (callback) return callback({ error });
+              socket.emit("errorMessage", error);
+              return;
+            }
+
+            if (listing.owner.toString() === userId) {
+              const error = "You cannot chat on your own listing";
+              if (callback) return callback({ error });
+              socket.emit("errorMessage", error);
+              return;
+            }
+
+            conversation = await Conversation.findOneAndUpdate(
+              {
+                listing: listingId,
+                buyer: socket.user._id,
+              },
+              {
+                $setOnInsert: {
+                  seller: listing.owner,
+                  participants: [socket.user._id, listing.owner],
+                  buyer: socket.user._id,
+                  unreadCount: {
+                    [socket.user._id.toString()]: 0,
+                    [listing.owner.toString()]: 1,
+                  },
+                },
+              },
+              { new: true, upsert: true }
+            );
+          }
+
+          const isParticipant = conversation.participants.some(
+            (p) => p.toString() === userId
+          );
+          if (!isParticipant) {
+            const error = "Not authorized";
+            if (callback) return callback({ error });
+            socket.emit("errorMessage", error);
+            return;
+          }
+
+          const listing = await Listing.findById(conversation.listing);
+          if (!listing || listing.status === "sold") {
+            const error = "Item is no longer available";
+            if (callback) return callback({ error });
+            socket.emit("errorMessage", error);
+            return;
+          }
+
+          socket.join(conversation._id.toString());
+
+          const message = await Message.create({
+            conversation: conversation._id,
+            sender: socket.user._id,
+            text,
+            image,
+          });
+
+          conversation.lastMessage = text || "📷 Image";
+          conversation.participants.forEach((participantId) => {
+            const pid = participantId.toString();
+            if (pid !== userId) {
+              const currentUnread = conversation.unreadCount?.get(pid) || 0;
+              conversation.unreadCount.set(pid, currentUnread + 1);
+            }
+          });
+
+          conversation.markModified("unreadCount");
+          await conversation.save();
+
+          const messageData = {
+            _id: message._id,
+            conversation: conversation._id.toString(),
+            sender: socket.user._id.toString(),
+            text,
+            image,
+            createdAt: message.createdAt,
+            isDeleted: false,
+          };
+
+          const updatedConversation = await Conversation.findById(
+            conversation._id
+          ).populate("listing", "title price status owner");
+
+          io.to(conversation._id.toString()).emit("newMessage", messageData);
+          io.to(conversation._id.toString()).emit("conversationUpdated", {
+            conversation: updatedConversation,
+          });
+
+          conversation.participants.forEach((participantId) => {
+            const pid = participantId.toString();
+            io.to(`user:${pid}`).emit("newMessage", messageData);
+            io.to(`user:${pid}`).emit("conversationUpdated", {
+              conversation: updatedConversation,
+            });
+          });
+
+          if (callback)
+            callback({
+              success: true,
+              conversation: updatedConversation,
+              message: messageData,
+            });
+
+          socket.emit("messageSent", { messageId: message._id });
+        } catch (err) {
+          console.error("Send message error:", err);
+          const error = "Failed to send message";
+          if (callback) return callback({ error });
+          socket.emit("errorMessage", error);
+        }
       }
-    });
+    );
 
     /* -------- DELETE MESSAGE -------- */
     socket.on("deleteMessage", async ({ messageId }) => {

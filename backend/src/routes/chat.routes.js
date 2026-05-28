@@ -6,6 +6,7 @@ import {
   getMessages,
   sendMessage,
   deleteMessage,
+  deleteConversation,
   reportMessage,
 } from "../controllers/chat.controller.js";
 
@@ -23,9 +24,12 @@ router.get("/:conversationId/messages", protect, getMessages);
 // Send message
 router.post("/:conversationId/messages", protect, sendMessage);
 
-//delete message
+// delete message
 router.delete("/message/:messageId", protect, deleteMessage);
 
-//report message
+// delete conversation
+router.delete("/:conversationId", protect, deleteConversation);
+
+// report message
 router.post("/message/:messageId/report", protect, reportMessage);
 export default router;

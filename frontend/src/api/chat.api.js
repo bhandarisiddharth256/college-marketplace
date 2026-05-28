@@ -12,23 +12,9 @@ export const getMessages = async (conversationId) => {
   return res.data;
 };
 
-// Send message
-export const sendMessage = async (conversationId, text, listingId) => {
-  // ❌ Fix: frontend cannot use ApiError
-  if (!listingId && (!conversationId || conversationId === "null")) {
-    throw new Error("listingId required");
-  }
-
-  const id =
-    conversationId && conversationId !== "null"
-      ? conversationId
-      : "new";
-
-  const res = await api.post(`/api/chat/${id}/messages`, {
-    text,
-    listingId,
-  });
-
+// Delete conversation
+export const deleteConversation = async (conversationId) => {
+  const res = await api.delete(`/api/chat/${conversationId}`);
   return res.data;
 };
 

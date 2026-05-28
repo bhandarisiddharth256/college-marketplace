@@ -39,6 +39,14 @@ const conversationSchema = new mongoose.Schema(
       of: Number,
       default: {},
     },
+
+    // 🗑️ Soft delete - tracks which users deleted this conversation
+    deletedFor: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
   },
   { timestamps: true }
 );

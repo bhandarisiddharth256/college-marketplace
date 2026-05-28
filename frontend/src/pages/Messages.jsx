@@ -4,11 +4,10 @@ import { useSearchParams } from "react-router-dom";
 import {
   getMyConversations,
   getMessages,
-  sendMessage,
-  deleteMessage,
+  deleteConversation,
+  reportMessage,
 } from "../api/chat.api";
 import { useAuth } from "../context/AuthContext";
-import { reportMessage } from "../api/chat.api";
 import { socket, connectSocket } from "../socket";
 function Messages() {
   const [searchParams] = useSearchParams();
@@ -27,6 +26,7 @@ function Messages() {
   const [startingListingId, setStartingListingId] = useState(null);
   const [selectedMsg, setSelectedMsg] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [showDeleteConversationModal, setShowDeleteConversationModal] = useState(false);
   const [reportReason, setReportReason] = useState("");
   const [sendingMessageId, setSendingMessageId] = useState(null);
   const messagesEndRef = useRef(null);
@@ -190,7 +190,7 @@ function Messages() {
   }, [activeConversation]);
 
   /* ---------------- SEND MESSAGE (OPTIMISTIC) ---------------- */
-  const handleSend = async () => {
+  const handleSend = () => {
     const trimmedText = text.trim();
 
     if (!userId) return;
@@ -213,35 +213,55 @@ function Messages() {
     setMessages((prev) => [...prev, tempMessage]);
     setText("");
 
-    try {
-      console.log("📡 Calling API with conversation:", activeConversation?._id);
-      const result = await sendMessage(
-        activeConversation?._id,
-        tempMessage.text,
-        listingId
-      );
+    const payload = {
+      conversationId: activeConversation?._id || "new",
+      text: tempMessage.text,
+    };
 
-      console.log("✅ API response:", result);
+    if (!activeConversation?._id) {
+      payload.listingId = listingId;
+    }
 
-      const updated = await getMyConversations();
-      setConversations(updated.data);
+    socket.emit("sendMessage", payload, (response) => {
+      if (!response) {
+        const error = "No acknowledgement from server";
+        console.error("❌", error);
+        alert(error);
+        setMessages((prev) => prev.filter((m) => m._id !== tempId));
+        setSendingMessageId(null);
+        return;
+      }
 
-      // 🔥 VERY IMPORTANT: replace temp conversation with real one if newly created
-      if (!activeConversation?._id) {
-        const created = updated.data.find(
-          (c) => c.listing?._id === listingId && c.buyer === userId
-        );
+      if (response.error) {
+        console.error("❌ Send error:", response.error);
+        alert("Failed to send message: " + response.error);
+        setMessages((prev) => prev.filter((m) => m._id !== tempId));
+        setSendingMessageId(null);
+        return;
+      }
 
-        if (created) {
-          console.log("✅ Created new conversation:", created._id);
-          setActiveConversation(created);
-          // Join the new conversation room immediately
-          socket.emit("joinConversation", created._id);
-          console.log("✅ Joined room:", created._id);
+      if (response.success) {
+        const { conversation: createdConversation } = response;
+
+        if (
+          createdConversation &&
+          createdConversation._id &&
+          activeConversation?._id !== createdConversation._id
+        ) {
+          setActiveConversation(createdConversation);
+          setConversations((prev) => {
+            const exists = prev.find((c) => c._id === createdConversation._id);
+            if (exists) {
+              return prev.map((c) =>
+                c._id === createdConversation._id ? createdConversation : c
+              );
+            }
+            return [createdConversation, ...prev];
+          });
+          joinConversationRoom(createdConversation._id);
         }
       }
 
-      // Wait a bit for socket event, then remove temp if real didn't arrive
       setTimeout(() => {
         setMessages((prev) => {
           const stillHasTemp = prev.some((m) => m._id === tempId);
@@ -253,11 +273,25 @@ function Messages() {
         });
         setSendingMessageId(null);
       }, 3000);
+    });
+  };
+
+  const handleDeleteConversation = async () => {
+    if (!activeConversation?._id) return;
+
+    try {
+      await deleteConversation(activeConversation._id);
+      setConversations((prev) =>
+        prev.filter((conv) => conv._id !== activeConversation._id)
+      );
+      setActiveConversation(null);
+      setMessages([]);
+      setShowDeleteConversationModal(false);
     } catch (err) {
-      console.error("❌ Send error:", err);
-      alert("Failed to send message: " + (err.message || "Unknown error"));
-      setMessages((prev) => prev.filter((m) => m._id !== tempId));
-      setSendingMessageId(null);
+      console.error("❌ Delete conversation error:", err);
+      alert(
+        "Failed to delete conversation: " + (err.message || "Unknown error")
+      );
     }
   };
 
@@ -290,15 +324,9 @@ function Messages() {
   useEffect(() => {
     socket.on("conversationUpdated", ({ conversation }) => {
       setConversations((prev) => {
-        // If conversation exists, update it; otherwise add it
-        const exists = prev.find((c) => c._id === conversation._id);
-        if (exists) {
-          return prev.map((c) =>
-            c._id === conversation._id ? conversation : c
-          );
-        }
-        // Add new conversation to the top
-        return [conversation, ...prev];
+        // Remove from current position and add to top (most recent first)
+        const filtered = prev.filter((c) => c._id !== conversation._id);
+        return [conversation, ...filtered];
       });
 
       setActiveConversation((prev) =>
@@ -306,8 +334,22 @@ function Messages() {
       );
     });
 
-    return () => socket.off("conversationUpdated");
-  }, []);
+    socket.on("conversationDeleted", ({ conversationId }) => {
+      setConversations((prev) =>
+        prev.filter((conv) => conv._id !== conversationId)
+      );
+
+      if (activeConversation?._id === conversationId) {
+        setActiveConversation(null);
+        setMessages([]);
+      }
+    });
+
+    return () => {
+      socket.off("conversationUpdated");
+      socket.off("conversationDeleted");
+    };
+  }, [activeConversation]);
 
   useEffect(() => {
     scrollToBottom();
@@ -368,6 +410,7 @@ function Messages() {
                 key={conv._id}
                 onClick={async () => {
                   setActiveConversation(conv);
+                  // Optimistically reset unread count UI
                   setConversations((prev) =>
                     prev.map((c) =>
                       c._id === conv._id
@@ -381,6 +424,7 @@ function Messages() {
                         : c,
                     ),
                   );
+                  // getMessages will also reset backend and emit socket event to other participants
                 }}
                 className={`p-3 rounded cursor-pointer mb-2 border ${
                   isActive
@@ -473,6 +517,12 @@ function Messages() {
                         {isOnline ? "Online" : "Offline"}
                       </span>
                     </div>
+                    <button
+                      onClick={() => setShowDeleteConversationModal(true)}
+                      className="text-sm text-red-600 hover:text-red-800 border border-red-200 px-3 py-1 rounded"
+                    >
+                      Delete chat
+                    </button>
                   </div>
 
                   {/* SOLD INFO BANNER */}
@@ -592,6 +642,33 @@ function Messages() {
           className="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
         >
           <img src={previewImage} className="max-h-[90%]" />
+        </div>
+      )}
+
+      {showDeleteConversationModal && activeConversation?._id && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded p-5 w-96">
+            <p className="font-semibold mb-3">Delete conversation</p>
+            <p className="mb-4 text-sm text-gray-600">
+              Are you sure you want to delete this conversation? This will
+              permanently remove all messages and you will no longer be able to
+              access it.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowDeleteConversationModal(false)}
+                className="flex-1 py-2 border rounded"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteConversation}
+                className="flex-1 py-2 bg-red-600 text-white rounded"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
