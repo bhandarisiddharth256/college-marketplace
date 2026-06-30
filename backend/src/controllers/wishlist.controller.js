@@ -98,5 +98,3 @@ export const moveWishlistToCart = asyncHandler(async (req, res) => {
     )
   );
 });
-
-

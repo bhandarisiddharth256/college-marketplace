@@ -32,6 +32,9 @@ export const startConversation = asyncHandler(async (req, res) => {
         seller: listing.owner,
         participants: [req.user._id, listing.owner],
       },
+      $pull: {
+        deletedFor: req.user._id,
+      },
     },
     { new: true, upsert: true }
   );
@@ -177,7 +180,17 @@ export const sendMessage = asyncHandler(async (req, res) => {
     }
   });
 
+  // ♻️ Restore conversation for all participants if they had deleted it
+  conversation.deletedFor = conversation.deletedFor.filter(
+    (userId) =>
+      !conversation.participants.some(
+        (participantId) => participantId.toString() === userId.toString()
+      )
+  );
+
   conversation.markModified("unreadCount");
+  conversation.markModified("deletedFor");
+
   await conversation.save();
 
   // 🔥 EMIT SOCKET EVENT TO BROADCAST MESSAGE
