@@ -56,6 +56,15 @@ export const createListing = asyncHandler(async (req, res) => {
 export const getAllListings = asyncHandler(async (req, res) => {
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
+
+  if (!Number.isInteger(page) || page < 1) {
+    throw new ApiError(400, "Page must be a positive number");
+  }
+
+  if (!Number.isInteger(limit) || limit < 1 || limit > 50) {
+    throw new ApiError(400, "Limit must be between 1 and 50");
+  }
+
   const skip = (page - 1) * limit;
 
   const filter = { status: "available" };
@@ -65,14 +74,20 @@ export const getAllListings = asyncHandler(async (req, res) => {
     filter.category = req.query.category;
   }
 
-  if (req.query.minPrice || req.query.maxPrice) {
-    filter.price = {};
-    if (req.query.minPrice) {
-      filter.price.$gte = Number(req.query.minPrice);
+  if (req.query.minPrice !== undefined || req.query.maxPrice !== undefined) {
+    const minPrice = req.query.minPrice === undefined ? 0 : Number(req.query.minPrice);
+    const maxPrice = req.query.maxPrice === undefined ? Infinity : Number(req.query.maxPrice);
+
+    if (
+      !Number.isFinite(minPrice) ||
+      minPrice < 0 ||
+      (maxPrice !== Infinity && (!Number.isFinite(maxPrice) || maxPrice < minPrice))
+    ) {
+      throw new ApiError(400, "Invalid price range");
     }
-    if (req.query.maxPrice) {
-      filter.price.$lte = Number(req.query.maxPrice);
-    }
+
+    filter.price = { $gte: minPrice };
+    if (maxPrice !== Infinity) filter.price.$lte = maxPrice;
   }
   filter.isDeleted = false;
   const listings = await Listing.find(filter)
@@ -331,28 +346,17 @@ export const reorderListingImages = asyncHandler(async (req, res) => {
 });
 
 /* 🔍 Get single listing by ID */
-export const getListingById = async (req, res) => {
-  try {
-    const listing = await Listing.findOne({
+export const getListingById = asyncHandler(async (req, res) => {
+  const listing = await Listing.findOne({
     _id: req.params.id,
     isDeleted: false,
   });
 
-    if (!listing) {
-      return res.status(404).json({
-        success: false,
-        message: "Listing not found",
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      data: listing,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error fetching listing",
-    });
+  if (!listing) {
+    throw new ApiError(404, "Listing not found");
   }
-};
+
+  return res.status(200).json(
+    new ApiResponse(200, listing, "Listing fetched successfully")
+  );
+});
