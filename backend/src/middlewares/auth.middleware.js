@@ -7,11 +7,10 @@ export const protect = asyncHandler(async (req, res, next) => {
   let token;
 
   // Expect token in Authorization header
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith("Bearer")
-  ) {
-    token = req.headers.authorization.split(" ")[1];
+  const authHeader = req.headers.authorization;
+
+  if (authHeader?.startsWith("Bearer ")) {
+    token = authHeader.slice(7).trim();
   }
 
   if (!token) {
